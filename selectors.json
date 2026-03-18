@@ -14,8 +14,9 @@
   },
   "gemini": {
     "messageContainer": "",
-    "userMessage": "",
-    "assistantMessage": "",
-    "streamingIndicator": ""
+    "userMessage": ".query-text",
+    "assistantMessage": "model-response",
+    "streamingIndicator": "[aria-label='Stop response']",
+    "textContent": ".query-text-line"
   }
 }

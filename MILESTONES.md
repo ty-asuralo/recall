@@ -67,3 +67,21 @@ First working end-to-end version of Recall. Captures user messages from Claude.a
 - Gemini selectors (stub only)
 - S3 export (UI placeholder, not implemented)
 - Query/retrieval layer above the exported JSONL
+
+---
+
+## v0.3.0 — Gemini integration (2026-03-18)
+
+### What's in it
+
+**Gemini capture**
+- Content script with conversation ID from `/app/{id}` URL pattern
+- Title read from `[aria-current="true"] .conversation-title` (sidebar active item) — `document.title` is always "Google Gemini" and unusable
+- User message selector: `.query-text`; assistant selector: `model-response`
+- Streaming indicator: `[aria-label='Stop response']`
+- Text child selector: `.query-text-line` to skip the visually-hidden "You said" accessibility label injected by Gemini
+- Additional strip of "You said" prefix in content script as a defensive fallback
+
+### What's not yet done
+- S3 export (UI placeholder, not implemented)
+- Query/retrieval layer above the exported JSONL
