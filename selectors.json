@@ -7,9 +7,10 @@
   },
   "chatgpt": {
     "messageContainer": "",
-    "userMessage": "",
-    "assistantMessage": "",
-    "streamingIndicator": ""
+    "userMessage": "[data-message-author-role='user']",
+    "assistantMessage": "[data-message-author-role='assistant']",
+    "streamingIndicator": "[data-testid='stop-button']",
+    "textContent": ".whitespace-pre-wrap"
   },
   "gemini": {
     "messageContainer": "",

@@ -7,6 +7,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   display: {
     maxConversationsPerPlatform: 10,
   },
+  capture: {
+    roles: ['user'],
+  },
   export: {
     defaultMethod: 'local',
     autoExport: false,
@@ -24,6 +27,9 @@ export async function getSettings(): Promise<AppSettings> {
     ...DEFAULT_SETTINGS,
     ...stored,
     display: { ...DEFAULT_SETTINGS.display, ...stored.display },
+    capture: {
+      roles: stored.capture?.roles?.length ? stored.capture.roles : DEFAULT_SETTINGS.capture.roles,
+    },
     export: {
       ...DEFAULT_SETTINGS.export,
       ...stored.export,
@@ -45,6 +51,12 @@ export function validateSettings(s: AppSettings): SettingsValidationError[] {
     errors.push({
       field: 'display.maxConversationsPerPlatform',
       message: 'Must be a whole number between 1 and 50',
+    });
+  }
+  if (s.capture.roles.length === 0) {
+    errors.push({
+      field: 'capture.roles',
+      message: 'At least one role must be selected',
     });
   }
   return errors;

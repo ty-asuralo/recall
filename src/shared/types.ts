@@ -37,6 +37,8 @@ export interface PlatformSelectors {
   userMessage: string;
   assistantMessage: string;
   streamingIndicator: string;
+  /** Optional: child selector within a message element to narrow text extraction (avoids capturing button labels) */
+  textContent?: string;
 }
 
 export interface SelectorsFile {
@@ -64,6 +66,10 @@ export interface DisplaySettings {
   maxConversationsPerPlatform: number; // 1–50, default 10
 }
 
+export interface CaptureSettings {
+  roles: ('user' | 'assistant')[]; // at least one required; default ['user']
+}
+
 export interface LocalExportSettings {
   folderName: string | null; // display name only — actual handle lives in IndexedDB
 }
@@ -84,6 +90,7 @@ export interface ExportSettings {
 export interface AppSettings {
   version: number;
   display: DisplaySettings;
+  capture: CaptureSettings;
   export: ExportSettings;
 }
 

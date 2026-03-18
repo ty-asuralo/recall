@@ -100,7 +100,8 @@ export function extractMessages(root: Document | Element, selectors: PlatformSel
   const combined = parts.map((p) => p.sel).join(', ');
   for (const el of Array.from(root.querySelectorAll(combined))) {
     const role = parts.find((p) => el.matches(p.sel))?.role ?? 'user';
-    const content = el.textContent?.trim() ?? '';
+    const textEl = selectors.textContent ? el.querySelector(selectors.textContent) : el;
+    const content = (textEl ?? el).textContent?.trim() ?? '';
     if (content) messages.push({ role, content, capturedAt: now });
   }
 

@@ -96,7 +96,8 @@ function render(groups: PlatformGroup[], totalExportable: number): void {
           ? `<span class="count-chip new">${formatCount(group.totalExportable)} new</span>`
           : `<span class="count-chip nonew">0 new</span>`;
 
-      const label = group.platform.charAt(0).toUpperCase() + group.platform.slice(1);
+      const PLATFORM_LABELS: Record<string, string> = { claude: 'Claude', chatgpt: 'ChatGPT', gemini: 'Gemini' };
+      const label = PLATFORM_LABELS[group.platform] ?? group.platform;
 
       return `<div class="platform-group open" data-platform="${group.platform}">
         <div class="platform-header">

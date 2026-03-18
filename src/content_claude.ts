@@ -1,4 +1,5 @@
 import { createExtractor } from './extractor';
+import { getSettings } from './shared/settings';
 import type { CaptureMessagePayload } from './shared/types';
 // TODO: runtime fetch via chrome.runtime.getURL is blocked by claude.ai CSP.
 // Selectors are bundled for now; hot-fix requires a rebuild + extension reload.
@@ -17,13 +18,16 @@ function getTitle(): string {
 
 console.log('[recall] content script loaded');
 
-function init(): void {
-  console.log('[recall] init started', allSelectors.claude);
+async function init(): Promise<void> {
+  const settings = await getSettings();
+  const captureRoles = settings.capture.roles;
+  console.log('[recall] init started', allSelectors.claude, 'captureRoles:', captureRoles);
 
   createExtractor({
     platform: 'claude',
     selectors: allSelectors.claude,
     onMessage: (message) => {
+      if (!captureRoles.includes(message.role)) return;
       const conversationId = getConversationId();
       if (!conversationId) return; // still on /new, no conversation yet
       console.log('[recall] captured:', message);
@@ -41,4 +45,4 @@ function init(): void {
   });
 }
 
-init();
+void init();

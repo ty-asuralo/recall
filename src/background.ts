@@ -35,6 +35,10 @@ chrome.runtime.onMessage.addListener(
 
 async function handleCapture(payload: CaptureMessagePayload): Promise<void> {
   const { conversationId, platform, url, title, message } = payload;
+
+  const settings = await getSettings();
+  if (!settings.capture.roles.includes(message.role)) return;
+
   const now = Date.now();
 
   const index = await getIndex();

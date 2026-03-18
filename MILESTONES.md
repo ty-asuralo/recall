@@ -38,3 +38,32 @@ First working end-to-end version of Recall. Captures user messages from Claude.a
 - S3 export (UI placeholder, not implemented)
 - Query/retrieval layer above the exported JSONL
 - Assistant message capture (user messages only for now)
+
+---
+
+## v0.2.0 — ChatGPT integration + capture settings (2026-03-17)
+
+### What's in it
+
+**ChatGPT capture**
+- Content script with conversation ID from `/c/{id}` URL pattern, title strips "ChatGPT" suffix
+- Selectors: `[data-message-author-role='user']` / `[data-message-author-role='assistant']`
+- Streaming indicator: `[data-testid='stop-button']`
+- Text child selector (`.whitespace-pre-wrap`) to avoid capturing button labels
+- Verified end-to-end: capture and JSONL export confirmed working
+
+**Capture settings**
+- New "Capture" section in Settings popup: multi-select checkboxes for User / Assistant roles
+- Default: User only
+- Validation: at least one role must be selected
+- Filter applied at content script init (reads settings once, gates `sendMessage`) and in background SW (authoritative safety net)
+- `CaptureSettings` type added to `AppSettings`; deep merge preserves stored value across extension updates
+
+**Popup**
+- Platform label map: "ChatGPT" renders correctly (was "Chatgpt")
+- `PlatformSelectors.textContent` optional field for narrowing text extraction per platform
+
+### What's not yet done
+- Gemini selectors (stub only)
+- S3 export (UI placeholder, not implemented)
+- Query/retrieval layer above the exported JSONL

@@ -10,6 +10,15 @@ async function main(): Promise<void> {
   const maxConvosInput = document.getElementById('max-convos') as HTMLInputElement;
   maxConvosInput.value = String(settings.display.maxConversationsPerPlatform);
 
+  // ── Capture ───────────────────────────────────────────────────────────────
+
+  const captureUserChk = document.getElementById('capture-user') as HTMLInputElement;
+  const captureAssistantChk = document.getElementById('capture-assistant') as HTMLInputElement;
+  const captureRolesError = document.getElementById('capture-roles-error')!;
+
+  captureUserChk.checked = settings.capture.roles.includes('user');
+  captureAssistantChk.checked = settings.capture.roles.includes('assistant');
+
   // ── Export: auto export toggle ────────────────────────────────────────────
 
   const autoExportToggle = document.getElementById('auto-export-enabled') as HTMLInputElement;
@@ -61,6 +70,8 @@ async function main(): Promise<void> {
     maxConvosInput.classList.remove('invalid');
     maxConvosError.hidden = true;
     maxConvosError.textContent = '';
+    captureRolesError.hidden = true;
+    captureRolesError.textContent = '';
   }
 
   function showStatus(msg: string, type: 'success' | 'error'): void {
@@ -72,10 +83,18 @@ async function main(): Promise<void> {
   saveBtn.addEventListener('click', async () => {
     clearErrors();
 
+    const captureRoles: ('user' | 'assistant')[] = [
+      ...(captureUserChk.checked ? ['user' as const] : []),
+      ...(captureAssistantChk.checked ? ['assistant' as const] : []),
+    ];
+
     const draft: AppSettings = {
       ...DEFAULT_SETTINGS,
       display: {
         maxConversationsPerPlatform: parseInt(maxConvosInput.value, 10),
+      },
+      capture: {
+        roles: captureRoles,
       },
       export: {
         defaultMethod: 'local',
@@ -96,6 +115,10 @@ async function main(): Promise<void> {
           maxConvosInput.classList.add('invalid');
           maxConvosError.textContent = err.message;
           maxConvosError.hidden = false;
+        }
+        if (err.field === 'capture.roles') {
+          captureRolesError.textContent = err.message;
+          captureRolesError.hidden = false;
         }
       }
       showStatus('Fix the errors above.', 'error');

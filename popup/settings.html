@@ -108,6 +108,15 @@
       }
       .btn-choose:hover { background: #eee; }
 
+      /* ── Checkbox group ── */
+      .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+      .checkbox-row {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 13px; cursor: pointer; user-select: none;
+      }
+      .checkbox-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: #111; }
+      .checkbox-error { font-size: 11px; color: #c00; margin-top: 4px; }
+
       /* ── Toggle ── */
       .setting-label-row {
         display: flex; align-items: center; justify-content: space-between;
@@ -167,6 +176,29 @@
           <input type="number" id="max-convos" min="1" max="50" value="10" />
         </div>
         <div class="field-error" id="max-convos-error" hidden></div>
+      </div>
+    </div>
+
+    <!-- Capture -->
+    <div class="category">
+      <div class="category-title">Capture</div>
+
+      <div class="setting-row">
+        <div class="setting-label">Roles to capture</div>
+        <div class="setting-hint">Select which message roles Recall should store.</div>
+        <div class="setting-control">
+          <div class="checkbox-group">
+            <label class="checkbox-row">
+              <input type="checkbox" id="capture-user" />
+              User — your own messages
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="capture-assistant" />
+              Assistant — model responses
+            </label>
+          </div>
+          <div class="checkbox-error" id="capture-roles-error" hidden></div>
+        </div>
       </div>
     </div>
 
