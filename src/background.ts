@@ -102,7 +102,17 @@ async function scheduleAutoExportAlarm(): Promise<void> {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => { void scheduleAutoExportAlarm(); });
+chrome.runtime.onInstalled.addListener((details) => {
+  void scheduleAutoExportAlarm();
+  if (details.reason === 'install') {
+    void chrome.windows.create({
+      url: chrome.runtime.getURL('popup/onboarding.html'),
+      type: 'popup',
+      width: 520,
+      height: 560,
+    });
+  }
+});
 chrome.runtime.onStartup.addListener(() => { void scheduleAutoExportAlarm(); });
 
 chrome.alarms.onAlarm.addListener((alarm) => {

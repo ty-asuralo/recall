@@ -1,9 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Recall",
-  "version": "0.1.0",
-  "description": "Capture AI conversations as a portable memory layer.",
+  "version": "0.3.0",
+  "description": "Capture your AI conversations from Claude, ChatGPT, and Gemini as a portable memory layer.",
   "permissions": ["storage", "unlimitedStorage", "windows", "alarms"],
+  "host_permissions": [
+    "https://claude.ai/*",
+    "https://chatgpt.com/*",
+    "https://gemini.google.com/*"
+  ],
+  "icons": {
+    "16":  "icons/icon-16.png",
+    "48":  "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "background": {
     "service_worker": "dist/background.js",
     "type": "module"
@@ -27,6 +37,11 @@
   ],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "whoami"
+    "default_title": "Recall",
+    "default_icon": {
+      "16":  "icons/icon-16.png",
+      "48":  "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   }
 }
