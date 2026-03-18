@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recall — Privacy Policy</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #111;
+      background: #fff;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    h2 { font-size: 18px; font-weight: 600; margin-top: 40px; margin-bottom: 12px; }
+    p  { margin-bottom: 16px; color: #333; }
+    ul { margin-bottom: 16px; padding-left: 24px; color: #333; }
+    li { margin-bottom: 6px; }
+
+    .meta { font-size: 14px; color: #888; margin-bottom: 40px; }
+    .highlight {
+      background: #f5f5f5;
+      border-left: 3px solid #111;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      border-radius: 0 6px 6px 0;
+    }
+    .highlight p { margin: 0; color: #111; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+  <h1>Privacy Policy</h1>
+  <p class="meta">Recall Chrome Extension &nbsp;·&nbsp; Last updated: March 2026</p>
+
+  <div class="highlight">
+    <p>Recall does not collect, transmit, or share your data with anyone. Everything stays on your device.</p>
+  </div>
+
+  <h2>What Recall does</h2>
+  <p>
+    Recall is a Chrome extension that captures messages from AI platforms (Claude, ChatGPT, Gemini)
+    and stores them locally on your device as a portable memory layer.
+  </p>
+
+  <h2>What data is accessed</h2>
+  <p>Recall reads the content of AI conversation pages you visit in order to extract message text. Specifically:</p>
+  <ul>
+    <li>The text content of your messages and model responses on claude.ai, chatgpt.com, and gemini.google.com</li>
+    <li>The URL and title of the conversation</li>
+    <li>Timestamps of when messages were captured</li>
+  </ul>
+  <p>Recall only accesses pages on the domains listed above. It does not access any other websites or browser data.</p>
+
+  <h2>Where data is stored</h2>
+  <p>All captured data is stored locally on your device in two places:</p>
+  <ul>
+    <li><strong>chrome.storage.local</strong> — conversation messages, metadata, and your settings</li>
+    <li><strong>IndexedDB</strong> — a reference to the export folder you select (not the folder's contents)</li>
+  </ul>
+  <p>
+    No data is sent to any external server, cloud service, or third party by the extension itself.
+    Recall has no backend, no analytics, and no accounts.
+  </p>
+
+  <h2>Export</h2>
+  <p>
+    When you choose to export, Recall writes JSONL files to a folder on your local filesystem that you
+    explicitly select using the browser's File System Access API. If you configure Amazon S3 export
+    (when available), data will be sent directly from your browser to your own S3 bucket using
+    credentials you provide. Recall does not operate any intermediate servers.
+  </p>
+
+  <h2>Permissions used</h2>
+  <ul>
+    <li><strong>storage / unlimitedStorage</strong> — to persist captured conversations locally</li>
+    <li><strong>alarms</strong> — to trigger the optional nightly auto-export at 11:59 PM</li>
+    <li><strong>windows</strong> — to open the export, settings, and about popup windows</li>
+    <li><strong>Host permissions</strong> (claude.ai, chatgpt.com, gemini.google.com) — to inject the content scripts that read conversation messages on those pages only</li>
+  </ul>
+
+  <h2>Data retention and deletion</h2>
+  <p>
+    Recall automatically evicts the oldest conversations once 100 are stored, keeping only the most
+    recent. You can delete all stored data at any time by removing the extension or clearing its
+    storage via Chrome's extension settings.
+  </p>
+
+  <h2>Third-party services</h2>
+  <p>
+    Recall does not integrate with any analytics, advertising, or tracking services. No data is
+    shared with third parties.
+  </p>
+
+  <h2>Changes to this policy</h2>
+  <p>
+    If this policy changes materially, the updated version will be published at this URL with a
+    revised date at the top.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    Questions about this policy can be raised via the project's
+    <a href="https://github.com/ty-asuralo/recall/issues">GitHub Issues</a>.
+  </p>
+
+</body>
+</html>
