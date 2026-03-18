@@ -2,43 +2,56 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Goal
-Capture user conversations from claude.ai, chatgpt.com, and gemini.google.com and persist them locally as a platform-agnostic memory layer.
+## Project
 
-## Phase 1 scope
-Capture only. No injection, no backend sync. Local storage only.
+Recall is a MV3 Chrome extension that captures user messages from Claude, ChatGPT, and Gemini as a portable memory layer for future context retrieval across platforms.
 
-## Stack
-- TypeScript + esbuild (or Vite)
-- Chrome Extension Manifest V3
-- chrome.storage.local for persistence
-- No UI frameworks — vanilla TS for content scripts
+See `MILESTONES.md` for a full record of what has been built and what remains.
 
 ## Commands
 ```bash
-npm run build       # compile TS via esbuild/vite
+npm run build       # compile TS via esbuild
 npm run watch       # rebuild on change
 npm run typecheck   # tsc --noEmit
 ```
-Load unpacked from `dist/` in chrome://extensions (Developer mode).
+Load unpacked from the project root (not `dist/`) in chrome://extensions → Developer mode.
 
 ## Architecture
-- `content_claude.ts` / `content_chatgpt.ts` / `content_gemini.ts` — one content script per platform
-- `extractor.ts` — shared DOM parsing and MutationObserver logic
-- `background.ts` — dedup, session stitching, storage writes
-- `popup.html` / `popup.ts` — read-only conversation viewer
+
+**Content scripts** (`src/content_{platform}.ts`) — one per platform, import bundled selectors, call `createExtractor`, send `CAPTURE_MESSAGE` to background.
+
+**Extractor** (`src/extractor.ts`) — shared MutationObserver logic, 600ms debounce, streaming detection, SPA nav via `history.pushState` monkey-patch, fingerprint-based dedup.
+
+**Background SW** (`src/background.ts`) — serial queue for storage writes, dedup, session stitching, rolling 100-conv eviction, `chrome.alarms` for daily auto-export at 23:59.
+
+**Shared** (`src/shared/`) — `types.ts` (all interfaces), `settings.ts` (getSettings/saveSettings/validateSettings), `idb.ts` (FileSystemDirectoryHandle persistence).
+
+**Popups** (`popup/`) — four separate windows opened via `chrome.windows.create`:
+- `popup.html` — main view, conversations grouped by platform sorted by `updatedAt`
+- `export.html` — validates settings, writes JSONL via File System Access API
+- `settings.html` — Display (max convos) + Export (folder, auto-export toggle)
+- `about.html` — product info
 
 ## Key design decisions
-- Selectors externalized to `selectors.json` (not hardcoded) for hot-fix without store resubmit
-- Messages only written after streaming completes (watch for streaming indicator)
-- SPA navigation handled via `history.pushState` monkey-patch
-- Storage key layout: `"conversations"` (index), `"conv:{id}"` (one key per convo), `"meta"`
-- Rolling eviction: keep last 100 conversations max
+- Selectors bundled at build time (claude.ai CSP blocks `fetch(chrome.runtime.getURL(...))` from content scripts)
+- `FileSystemDirectoryHandle` stored in IndexedDB (not JSON-serializable, can't go in `chrome.storage`)
+- Folder name mirrored into `chrome.storage` settings so export popup can display it without IndexedDB round-trip
+- Background SW can use the stored handle for auto-export if permission was previously granted — no user gesture needed in extension context
+- Messages only captured after streaming completes (no streaming indicator on Claude currently — relies on debounce)
 
-## Data model
-See `src/shared/types.ts` — `Message`, `Conversation`, `Platform` types.
+## Storage layout
+```
+chrome.storage.local:
+  "conversations"   → ConversationsIndex { ids: string[] }
+  "conv:{id}"       → Conversation
+  "meta"            → Meta { lastExportedAt, lastUpdated, version }
+  "settings"        → AppSettings
+
+IndexedDB (db: "recall"):
+  "handles" store, key "exportDir" → FileSystemDirectoryHandle
+```
 
 ## Known fragile areas
 - DOM selectors break on platform redeploys — always check `selectors.json` first
-- Streaming detection is platform-specific — see `extractor.ts`
-- SPA nav re-init must not duplicate messages already captured
+- ChatGPT and Gemini selectors are empty stubs — not yet implemented
+- Auto-export silently skips if folder permission has expired — user must open export popup to re-authorize
