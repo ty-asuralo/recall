@@ -1,6 +1,20 @@
-# Recall
+<h1 align="center">Recall</h1>
 
 Your AI conversations shouldn't be trapped in one platform.
+
+## The problem
+
+Every AI platform — Claude, ChatGPT, Gemini — keeps your conversations siloed. Switch models and you start from scratch. The context you've built up: your preferences, your ongoing projects, the things you've already explained a dozen times — gone. You're constantly re-introducing yourself to every new model you try.
+
+There's no portable memory layer. Your conversations belong to the platform, not to you.
+
+## What Recall does
+
+Recall is a Chrome extension that runs quietly in the background and captures your AI conversations locally as you have them. No accounts, no cloud sync, no third-party servers — everything stays on your machine.
+
+Captured messages are exported as JSONL files, organized by platform and role. This gives you a clean, portable dataset of your AI interactions that you own and control.
+
+The exported data is designed to feed into a retrieval layer (coming soon) — so you can carry your context with you when you switch models, or query your own conversation history to surface relevant past exchanges.
 
 ```mermaid
 flowchart LR
@@ -25,20 +39,6 @@ flowchart LR
     R -- export --> E
     R -- export --> F
 ```
-
-## The problem
-
-Every AI platform — Claude, ChatGPT, Gemini — keeps your conversations siloed. Switch models and you start from scratch. The context you've built up: your preferences, your ongoing projects, the things you've already explained a dozen times — gone. You're constantly re-introducing yourself to every new model you try.
-
-There's no portable memory layer. Your conversations belong to the platform, not to you.
-
-## What Recall does
-
-Recall is a Chrome extension that runs quietly in the background and captures your AI conversations locally as you have them. No accounts, no cloud sync, no third-party servers — everything stays on your machine.
-
-Captured messages are exported as JSONL files, organized by platform and role. This gives you a clean, portable dataset of your AI interactions that you own and control.
-
-The exported data is designed to feed into a retrieval layer (coming soon) — so you can carry your context with you when you switch models, or query your own conversation history to surface relevant past exchanges.
 
 ## Supported platforms
 
