@@ -1,0 +1,20 @@
+{
+  "claude": {
+    "messageContainer": "",
+    "userMessage": "[data-testid='user-message']",
+    "assistantMessage": "",
+    "streamingIndicator": ""
+  },
+  "chatgpt": {
+    "messageContainer": "",
+    "userMessage": "",
+    "assistantMessage": "",
+    "streamingIndicator": ""
+  },
+  "gemini": {
+    "messageContainer": "",
+    "userMessage": "",
+    "assistantMessage": "",
+    "streamingIndicator": ""
+  }
+}

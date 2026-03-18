@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recall</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html { width: 380px; }
+
+      body {
+        width: 380px;
+        display: flex;
+        flex-direction: column;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        color: #111;
+        background: #fff;
+      }
+
+      /* ── Header ── */
+      .header {
+        display: flex; align-items: center; gap: 10px;
+        padding: 14px 16px 12px;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .header-logo {
+        width: 28px; height: 28px;
+        background: #111; color: #fff;
+        border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 14px; letter-spacing: -0.5px;
+        flex-shrink: 0;
+      }
+      .header-text { flex: 1; }
+      .header-title { font-size: 15px; font-weight: 600; line-height: 1.2; }
+      .header-desc { color: #888; font-size: 11px; margin-top: 1px; }
+      .header-badge {
+        background: #111; color: #fff;
+        font-size: 11px; font-weight: 600;
+        padding: 2px 8px; border-radius: 99px;
+        white-space: nowrap;
+      }
+      .header-badge.none { background: #eee; color: #888; }
+
+      /* ── Menu ── */
+      .menu {
+        display: flex;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .menu-item {
+        flex: 1;
+        padding: 8px 0;
+        background: none; border: none;
+        font-size: 12px; color: #555;
+        cursor: pointer; text-align: center;
+        border-right: 1px solid #f0f0f0;
+        transition: background 0.1s, color 0.1s;
+      }
+      .menu-item:last-child { border-right: none; }
+      .menu-item:hover { background: #fafafa; color: #111; }
+
+      /* ── Conversations ── */
+      .conversations { padding: 8px 0; }
+      .empty-state {
+        padding: 32px 16px;
+        text-align: center; color: #aaa;
+        font-size: 12px; line-height: 1.6;
+      }
+
+      .platform-group { border-bottom: 1px solid #f4f4f4; }
+      .platform-group:last-child { border-bottom: none; }
+
+      .platform-header {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 16px;
+        cursor: pointer; user-select: none;
+      }
+      .platform-header:hover { background: #fafafa; }
+
+      .platform-dot {
+        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      }
+      .platform-dot.claude  { background: #D97757; }
+      .platform-dot.chatgpt { background: #10A37F; }
+      .platform-dot.gemini  { background: #4285F4; }
+
+      .platform-name { font-weight: 600; font-size: 12px; flex: 1; }
+      .platform-counts { display: flex; gap: 6px; align-items: center; }
+      .count-chip {
+        font-size: 10px; padding: 1px 6px;
+        border-radius: 99px; font-weight: 500;
+      }
+      .count-chip.total { background: #f0f0f0; color: #555; }
+      .count-chip.new   { background: #111; color: #fff; }
+      .count-chip.nonew { background: #f0f0f0; color: #aaa; }
+
+      .chevron {
+        font-size: 9px; color: #bbb;
+        transition: transform 0.15s; flex-shrink: 0;
+      }
+      .platform-group.open .chevron { transform: rotate(90deg); }
+      .platform-body { display: none; padding: 0 0 6px; }
+      .platform-group.open .platform-body { display: block; }
+
+      .conv-row {
+        display: flex; align-items: baseline; gap: 8px;
+        padding: 5px 16px 5px 32px;
+      }
+      .conv-row:hover { background: #fafafa; }
+      .conv-title-text {
+        flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        font-size: 12px; color: #222;
+      }
+      .conv-msg-count { font-size: 11px; color: #aaa; white-space: nowrap; }
+      .conv-new-count {
+        font-size: 10px; font-weight: 600; color: #111;
+        white-space: nowrap; background: #f5f5f5;
+        padding: 1px 5px; border-radius: 99px;
+      }
+      .conv-new-count.none { color: #ccc; background: none; font-weight: 400; }
+
+      /* ── Footer ── */
+      .footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; }
+      .export-trigger {
+        width: 100%; padding: 9px;
+        background: #111; color: #fff;
+        border: none; border-radius: 6px;
+        font-size: 13px; font-weight: 500;
+        cursor: pointer;
+      }
+      .export-trigger:hover { background: #333; }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="header-logo">R</div>
+      <div class="header-text">
+        <div class="header-title">Recall</div>
+        <div class="header-desc">Your portable AI memory</div>
+      </div>
+      <div id="header-badge" class="header-badge none">0 new</div>
+    </header>
+
+    <!-- Menu -->
+    <nav class="menu">
+      <button class="menu-item" id="menu-about">About</button>
+      <button class="menu-item" id="menu-settings">Settings</button>
+    </nav>
+
+    <div class="conversations" id="conversations"></div>
+
+    <footer class="footer">
+      <button class="export-trigger" id="export-trigger">Export</button>
+    </footer>
+
+    <script src="../dist/popup.js"></script>
+  </body>
+</html>

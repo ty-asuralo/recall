@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Recall — Settings</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        width: 400px;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 13px; color: #111; background: #fff;
+        padding: 20px;
+        display: flex; flex-direction: column; gap: 0;
+      }
+
+      h2 { font-size: 15px; font-weight: 600; margin-bottom: 20px; }
+
+      /* ── Category ── */
+      .category { margin-bottom: 24px; }
+
+      .category-title {
+        font-size: 10px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.6px; color: #aaa;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 14px;
+      }
+
+      /* ── Setting row ── */
+      .setting-row {
+        display: flex; flex-direction: column; gap: 4px;
+        margin-bottom: 14px;
+      }
+      .setting-row:last-child { margin-bottom: 0; }
+
+      .setting-label { font-size: 13px; font-weight: 500; }
+      .setting-hint { font-size: 11px; color: #888; line-height: 1.4; }
+
+      .setting-control { margin-top: 6px; }
+
+      input[type=number] {
+        width: 72px; padding: 5px 8px;
+        border: 1.5px solid #ddd; border-radius: 6px;
+        font-size: 13px; color: #111;
+        outline: none;
+      }
+      input[type=number]:focus { border-color: #111; }
+      input[type=number].invalid { border-color: #c00; }
+
+      .field-error { font-size: 11px; color: #c00; margin-top: 4px; }
+
+      /* ── Export method subsections ── */
+      .export-subsection {
+        border: 1.5px solid #e8e8e8;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+      .export-subsection:last-child { margin-bottom: 0; }
+      .export-subsection.disabled { opacity: 0.45; }
+
+      .subsection-header {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 12px;
+        background: #fafafa;
+        border-bottom: 1px solid #f0f0f0;
+      }
+      .subsection-icon { font-size: 16px; }
+      .subsection-title { font-weight: 500; font-size: 13px; flex: 1; }
+      .soon-badge {
+        font-size: 9px; font-weight: 600; text-transform: uppercase;
+        background: #eee; color: #999;
+        padding: 1px 5px; border-radius: 4px; letter-spacing: 0.3px;
+      }
+
+      .subsection-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+      .field-row {
+        display: flex; flex-direction: column; gap: 4px;
+      }
+      .field-label { font-size: 11px; font-weight: 500; color: #666; }
+      .field-value-row {
+        display: flex; align-items: center; gap: 8px;
+      }
+      .field-display {
+        flex: 1; padding: 6px 10px;
+        background: #f7f7f7; border-radius: 6px;
+        font-size: 12px; color: #444;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .field-display.unset { color: #aaa; font-style: italic; }
+
+      input[type=text] {
+        flex: 1; padding: 6px 10px;
+        border: 1.5px solid #ddd; border-radius: 6px;
+        font-size: 12px; color: #111; background: #fff;
+        outline: none;
+      }
+      input[type=text]:focus { border-color: #111; }
+      input[type=text]:disabled { background: #f7f7f7; color: #bbb; cursor: not-allowed; }
+
+      .btn-choose {
+        background: none; border: 1px solid #ddd;
+        border-radius: 5px; padding: 4px 10px;
+        font-size: 11px; cursor: pointer; color: #333; white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .btn-choose:hover { background: #eee; }
+
+      /* ── Toggle ── */
+      .setting-label-row {
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .toggle {
+        position: relative; display: inline-block;
+        width: 36px; height: 20px; flex-shrink: 0;
+      }
+      .toggle input { display: none; }
+      .toggle-slider {
+        position: absolute; inset: 0;
+        background: #ccc; border-radius: 20px;
+        cursor: pointer; transition: background 0.2s;
+      }
+      .toggle-slider::after {
+        content: ''; position: absolute;
+        width: 14px; height: 14px; left: 3px; top: 3px;
+        background: #fff; border-radius: 50%;
+        transition: transform 0.2s;
+      }
+      .toggle input:checked + .toggle-slider { background: #111; }
+      .toggle input:checked + .toggle-slider::after { transform: translateX(16px); }
+
+      /* ── Footer ── */
+      .footer {
+        display: flex; align-items: center; gap: 12px;
+        padding-top: 20px;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 4px;
+      }
+      .btn-save {
+        padding: 9px 20px;
+        background: #111; color: #fff;
+        border: none; border-radius: 6px;
+        font-size: 13px; font-weight: 500; cursor: pointer;
+        flex-shrink: 0;
+      }
+      .btn-save:hover { background: #333; }
+      .btn-save:disabled { background: #ccc; cursor: default; }
+
+      .save-status { font-size: 12px; color: #888; }
+      .save-status.success { color: #1a7a3a; }
+      .save-status.error { color: #c00; }
+    </style>
+  </head>
+  <body>
+    <h2>Settings</h2>
+
+    <!-- Display -->
+    <div class="category">
+      <div class="category-title">Display</div>
+
+      <div class="setting-row">
+        <div class="setting-label">Max conversations per platform</div>
+        <div class="setting-hint">How many recently active conversations to show per platform in the main popup.</div>
+        <div class="setting-control">
+          <input type="number" id="max-convos" min="1" max="50" value="10" />
+        </div>
+        <div class="field-error" id="max-convos-error" hidden></div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="category">
+      <div class="category-title">Export</div>
+
+      <div class="setting-row">
+        <div class="setting-label-row">
+          <span class="setting-label">Enable auto export</span>
+          <label class="toggle">
+            <input type="checkbox" id="auto-export-enabled" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-hint">Automatically export new messages every day at 11:59 PM. Uses the local folder configured below.</div>
+      </div>
+
+      <!-- Local filesystem -->
+      <div class="export-subsection" id="subsection-local">
+        <div class="subsection-header">
+          <span class="subsection-icon">💾</span>
+          <span class="subsection-title">Local filesystem</span>
+        </div>
+        <div class="subsection-body">
+          <div class="field-row">
+            <div class="field-label">Export folder</div>
+            <div class="field-value-row">
+              <div class="field-display unset" id="local-folder-name">No folder selected</div>
+              <button class="btn-choose" id="local-folder-btn">Choose</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Amazon S3 -->
+      <div class="export-subsection disabled" id="subsection-s3">
+        <div class="subsection-header">
+          <span class="subsection-icon">☁️</span>
+          <span class="subsection-title">Amazon S3</span>
+          <span class="soon-badge">Soon</span>
+        </div>
+        <div class="subsection-body">
+          <div class="field-row">
+            <div class="field-label">Bucket</div>
+            <div class="field-value-row">
+              <input type="text" id="s3-bucket" placeholder="my-bucket" disabled />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Prefix</div>
+            <div class="field-value-row">
+              <input type="text" id="s3-prefix" placeholder="recall/" disabled />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Region</div>
+            <div class="field-value-row">
+              <input type="text" id="s3-region" placeholder="us-east-1" disabled />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn-save" id="btn-save">Save</button>
+      <span class="save-status" id="save-status"></span>
+    </div>
+
+    <script src="../dist/settings.js"></script>
+  </body>
+</html>

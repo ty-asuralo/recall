@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Recall",
+  "version": "0.1.0",
+  "description": "Capture AI conversations as a portable memory layer.",
+  "permissions": ["storage", "unlimitedStorage", "windows", "alarms"],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["dist/content_claude.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["dist/content_chatgpt.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["dist/content_gemini.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "whoami"
+  }
+}

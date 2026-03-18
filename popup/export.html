@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Recall — Export</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        width: 380px;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 13px; color: #111; background: #fff;
+        padding: 20px;
+        display: flex; flex-direction: column; gap: 16px;
+      }
+
+      h2 { font-size: 15px; font-weight: 600; }
+
+      .export-options { display: flex; flex-direction: column; gap: 8px; }
+
+      .export-option {
+        display: flex; align-items: center; gap: 10px;
+        padding: 11px 12px;
+        border: 1.5px solid #e8e8e8; border-radius: 8px;
+        cursor: pointer; transition: border-color 0.1s;
+      }
+      .export-option:hover:not(.disabled) { border-color: #bbb; }
+      .export-option.selected { border-color: #111; }
+      .export-option.disabled { opacity: 0.4; cursor: default; }
+
+      .option-icon { font-size: 18px; flex-shrink: 0; }
+      .option-text { flex: 1; }
+      .option-title { font-weight: 500; font-size: 13px; }
+      .option-meta { font-size: 11px; color: #888; margin-top: 1px; }
+      .option-meta.configured { color: #1a7a3a; }
+      .soon-badge {
+        font-size: 9px; font-weight: 600; text-transform: uppercase;
+        background: #f0f0f0; color: #999;
+        padding: 1px 5px; border-radius: 4px; letter-spacing: 0.3px;
+      }
+
+      /* Warning banner */
+      .warning {
+        display: flex; align-items: flex-start; gap: 8px;
+        padding: 10px 12px;
+        background: #fffbeb; border: 1px solid #f5d76e;
+        border-radius: 7px; font-size: 12px; color: #7a5c00;
+        line-height: 1.5;
+      }
+      .warning[hidden] { display: none; }
+      .warning-icon { flex-shrink: 0; font-size: 14px; }
+      .warning a {
+        color: #7a5c00; font-weight: 500; text-decoration: underline; cursor: pointer;
+      }
+
+      .actions { display: flex; gap: 8px; }
+      .btn-cancel {
+        flex: 1; padding: 9px;
+        background: #f0f0f0; color: #333;
+        border: none; border-radius: 6px;
+        font-size: 13px; cursor: pointer;
+      }
+      .btn-cancel:hover { background: #e5e5e5; }
+      .btn-confirm {
+        flex: 2; padding: 9px;
+        background: #111; color: #fff;
+        border: none; border-radius: 6px;
+        font-size: 13px; font-weight: 500; cursor: pointer;
+      }
+      .btn-confirm:hover { background: #333; }
+      .btn-confirm:disabled { background: #ccc; cursor: default; }
+
+      .status {
+        font-size: 11px; color: #666; min-height: 16px;
+        white-space: pre-line; text-align: center;
+      }
+      .status.error { color: #c00; }
+      .status.success { color: #1a7a3a; }
+    </style>
+  </head>
+  <body>
+    <h2>Export conversations</h2>
+
+    <div class="export-options">
+      <div class="export-option selected" id="opt-local">
+        <div class="option-icon">💾</div>
+        <div class="option-text">
+          <div class="option-title">Local filesystem</div>
+          <div class="option-meta" id="local-meta">Loading…</div>
+        </div>
+      </div>
+
+      <div class="export-option disabled" id="opt-s3">
+        <div class="option-icon">☁️</div>
+        <div class="option-text">
+          <div class="option-title">Amazon S3 &nbsp;<span class="soon-badge">Soon</span></div>
+          <div class="option-meta">Upload to an S3 bucket</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="warning" id="warning" hidden>
+      <span class="warning-icon">⚠️</span>
+      <span id="warning-text"></span>
+    </div>
+
+    <div class="actions">
+      <button class="btn-cancel" id="btn-cancel">Cancel</button>
+      <button class="btn-confirm" id="btn-confirm">Export</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <script src="../dist/export.js"></script>
+  </body>
+</html>
