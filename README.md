@@ -2,6 +2,30 @@
 
 Your AI conversations shouldn't be trapped in one platform.
 
+```mermaid
+flowchart LR
+    subgraph sources["AI Platforms"]
+        A("🤖  Claude")
+        B("💬  ChatGPT")
+        C("✨  Gemini")
+    end
+
+    R["⚡ Recall\n──────────────\nCapture  ·  Deduplicate\nStore  ·  Export"]
+
+    subgraph dest["Your Storage"]
+        D("💾  Local files\nJSONL")
+        E("☁️  Amazon S3\ncoming soon")
+        F("⋯  More\ncoming soon")
+    end
+
+    A -- messages --> R
+    B -- messages --> R
+    C -- messages --> R
+    R -- export --> D
+    R -- export --> E
+    R -- export --> F
+```
+
 ## The problem
 
 Every AI platform — Claude, ChatGPT, Gemini — keeps your conversations siloed. Switch models and you start from scratch. The context you've built up: your preferences, your ongoing projects, the things you've already explained a dozen times — gone. You're constantly re-introducing yourself to every new model you try.
@@ -22,7 +46,7 @@ The exported data is designed to feed into a retrieval layer (coming soon) — s
 |----------|---------|--------|
 | Claude   | ✅       | ✅      |
 | ChatGPT  | ✅       | ✅      |
-| Gemini   | Coming soon | —  |
+| Gemini   | ✅       | ✅      |
 
 ## Features
 
@@ -43,6 +67,8 @@ Messages are exported as JSONL, one record per line, organized as:
   chatgpt/
     chatgpt_user_2026-03-17T23-59-00.jsonl
     chatgpt_assistant_2026-03-17T23-59-00.jsonl
+  gemini/
+    gemini_user_2026-03-17T23-59-00.jsonl
 ```
 
 Each record is self-contained:
@@ -72,10 +98,9 @@ Recall is not yet published to the Chrome Web Store. To install it locally:
 
 ## Roadmap
 
-- [ ] Gemini support
 - [ ] Query/retrieval layer — semantic search over your captured history
 - [ ] S3 export
-- [ ] Assistant message deduplication improvements
+- [ ] Chrome Web Store publication
 
 ## Why local-first?
 
