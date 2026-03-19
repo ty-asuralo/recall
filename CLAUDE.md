@@ -13,8 +13,16 @@ See `MILESTONES.md` for a full record of what has been built and what remains.
 npm run build       # compile TS via esbuild
 npm run watch       # rebuild on change
 npm run typecheck   # tsc --noEmit
+npm run package     # build + zip for Chrome Web Store submission → recall-v{version}.zip
 ```
 Load unpacked from the project root (not `dist/`) in chrome://extensions → Developer mode.
+
+## Releasing a new version
+1. Bump `version` in both `manifest.json` and `package.json`
+2. Update `MILESTONES.md` with what changed
+3. Run `npm run package` → produces `recall-v{version}.zip`
+4. Upload the zip to the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole)
+5. Commit and push, then `git tag v{version}`
 
 ## Architecture
 
@@ -53,5 +61,5 @@ IndexedDB (db: "recall"):
 
 ## Known fragile areas
 - DOM selectors break on platform redeploys — always check `selectors.json` first
-- ChatGPT and Gemini selectors are empty stubs — not yet implemented
+- Gemini title read from `[aria-current="true"] .conversation-title` — breaks if sidebar markup changes
 - Auto-export silently skips if folder permission has expired — user must open export popup to re-authorize
