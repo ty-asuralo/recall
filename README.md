@@ -1,6 +1,12 @@
 <h1 align="center">Recall</h1>
 
-Your AI conversations shouldn't be trapped in one platform.
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/recall/gnbbmallepmgpffoinnlkchkemgeikmg">
+    <img src="https://img.shields.io/badge/Available%20on-Chrome%20Web%20Store-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Available on Chrome Web Store" />
+  </a>
+</p>
+
+<p align="center">Your AI conversations shouldn't be trapped in one platform.</p>
 
 ## The problem
 
@@ -89,7 +95,9 @@ Each record is self-contained:
 
 ## Installation
 
-Recall is not yet published to the Chrome Web Store. To install it locally:
+**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/recall/gnbbmallepmgpffoinnlkchkemgeikmg)** — one click, no setup required.
+
+To run from source:
 
 1. Clone this repo
 2. Run `npm install && npm run build`
