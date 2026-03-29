@@ -2,7 +2,7 @@
   "claude": {
     "messageContainer": "",
     "userMessage": "[data-testid='user-message']",
-    "assistantMessage": "",
+    "assistantMessage": ".font-claude-response",
     "streamingIndicator": "",
     "actionBar": ""
   },
