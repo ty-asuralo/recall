@@ -7,6 +7,15 @@ All notable changes to Recall are documented here.
 ## [Unreleased]
 
 ### Changed
+- **Flat message store — search-ready data layer**
+  - Messages are now stored as individual IDB records in a `messages` store (DB v3), keyed by `messageId`
+  - `conversations` store holds `ConversationMeta` only (no embedded messages array)
+  - `messages` store has indexes on `conversationId`, `capturedAt`, `platform` — enables indexed queries without full table scans
+  - `platform` denormalized onto each `StoredMessage` so cross-conversation queries need no join
+  - `capturedAt` index makes incremental export a single IDB range query instead of loading all conversations
+  - Popup list view loads `ConversationMeta` only — no messages fetched until a conversation is opened
+  - Migration (`migrateMessagesToFlatStore`) splits any existing embedded-messages conversations into flat records on startup
+
 - **Conversations moved from `chrome.storage.local` to IndexedDB** (`src/shared/idb.ts`)
   - Conversation bodies (`conv:{id}`) now live in the `conversations` object store in IndexedDB (DB version 2)
   - `chrome.storage.local` now only holds the index, meta, and settings — all small, appropriate data

@@ -1,10 +1,14 @@
 // Re-exported from shared so popup scripts keep their existing import path
 export {
-  deleteConversations,
-  getConversation,
-  getConversations,
+  deleteConversationMetas,
+  deleteMessagesByConversations,
+  getConversationMeta,
+  getConversationMetas,
   getExportDir,
+  getMessagesAfterCursor,
+  getMessagesByConversation,
   getStorageStats,
-  saveConversation,
+  saveConversationMeta,
   saveExportDir,
+  saveMessage,
 } from '../src/shared/idb';

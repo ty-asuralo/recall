@@ -1,6 +1,6 @@
 import { getSettings } from '../src/shared/settings';
-import { getConversations } from '../src/shared/idb';
-import type { Conversation, ConversationsIndex, Meta, Platform } from '../src/shared/types';
+import { getConversationMetas, getMessagesAfterCursor } from '../src/shared/idb';
+import type { ConversationMeta, ConversationsIndex, Meta, Platform } from '../src/shared/types';
 
 interface ConvDisplay {
   id: string;
@@ -15,13 +15,33 @@ interface PlatformGroup {
   totalExportable: number;
 }
 
-async function loadAll(): Promise<{ conversations: Conversation[]; meta: Meta | undefined }> {
+async function loadAll(): Promise<{
+  conversations: ConversationMeta[];
+  exportableCounts: Map<string, number>;
+  meta: Meta | undefined;
+}> {
   const result = await chrome.storage.local.get(['conversations', 'meta']);
   const index = result['conversations'] as ConversationsIndex | undefined;
   const meta = result['meta'] as Meta | undefined;
-  if (!index || index.ids.length === 0) return { conversations: [], meta };
-  const conversations = await getConversations(index.ids);
-  return { conversations, meta };
+  const cursor = meta?.lastExportedAt ?? 0;
+
+  if (!index || index.ids.length === 0) {
+    return { conversations: [], exportableCounts: new Map(), meta };
+  }
+
+  // Load conversation metadata and new-message counts in parallel.
+  // getMessagesAfterCursor uses the capturedAt index — no full table scan.
+  const [conversations, newMessages] = await Promise.all([
+    getConversationMetas(index.ids),
+    getMessagesAfterCursor(cursor),
+  ]);
+
+  const exportableCounts = new Map<string, number>();
+  for (const msg of newMessages) {
+    exportableCounts.set(msg.conversationId, (exportableCounts.get(msg.conversationId) ?? 0) + 1);
+  }
+
+  return { conversations, exportableCounts, meta };
 }
 
 function formatCount(n: number, max = 10): string {
@@ -32,21 +52,23 @@ function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function buildPlatformGroups(conversations: Conversation[], cursor: number, maxPerPlatform: number): PlatformGroup[] {
+function buildPlatformGroups(
+  conversations: ConversationMeta[],
+  exportableCounts: Map<string, number>,
+  maxPerPlatform: number,
+): PlatformGroup[] {
   const order: Platform[] = ['claude', 'chatgpt', 'gemini'];
   const map = new Map<Platform, ConvDisplay[]>();
   for (const p of order) map.set(p, []);
 
-  // Most recently touched first
   const sorted = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
 
   for (const conv of sorted) {
-    const exportable = conv.messages.filter((m) => m.capturedAt > cursor).length;
     map.get(conv.platform)?.push({
       id: conv.id,
       title: conv.title || 'Untitled',
-      totalMessages: conv.messages.length,
-      exportableMessages: exportable,
+      totalMessages: conv.messageCount,
+      exportableMessages: exportableCounts.get(conv.id) ?? 0,
     });
   }
 
@@ -121,9 +143,11 @@ function render(groups: PlatformGroup[], totalExportable: number): void {
 }
 
 async function main(): Promise<void> {
-  const [{ conversations, meta }, settings] = await Promise.all([loadAll(), getSettings()]);
-  const cursor = meta?.lastExportedAt ?? 0;
-  const groups = buildPlatformGroups(conversations, cursor, settings.display.maxConversationsPerPlatform);
+  const [{ conversations, exportableCounts, meta }, settings] = await Promise.all([
+    loadAll(),
+    getSettings(),
+  ]);
+  const groups = buildPlatformGroups(conversations, exportableCounts, settings.display.maxConversationsPerPlatform);
   const totalExportable = groups.reduce((n, g) => n + g.totalExportable, 0);
 
   render(groups, totalExportable);

@@ -1,34 +1,35 @@
 import { getSettings } from '../src/shared/settings';
-import type { ConversationsIndex, ExportRecord, Meta } from '../src/shared/types';
-import { getConversations, getExportDir } from './idb';
+import type { ExportRecord, Meta } from '../src/shared/types';
+import { getConversationMetas, getExportDir, getMessagesAfterCursor } from './idb';
 
 async function collectNewRecords(): Promise<ExportRecord[]> {
-  const result = await chrome.storage.local.get(['conversations', 'meta']);
-  const index = result['conversations'] as ConversationsIndex | undefined;
+  const result = await chrome.storage.local.get('meta');
   const meta = result['meta'] as Meta | undefined;
   const cursor = meta?.lastExportedAt ?? 0;
 
-  if (!index || index.ids.length === 0) return [];
+  const messages = await getMessagesAfterCursor(cursor);
+  if (messages.length === 0) return [];
 
-  const convs = await getConversations(index.ids);
+  // Join with ConversationMeta to get url + title
+  const convIds = [...new Set(messages.map((m) => m.conversationId))];
+  const convMetas = await getConversationMetas(convIds);
+  const convMap = new Map(convMetas.map((c) => [c.id, c]));
+
   const records: ExportRecord[] = [];
-
-  for (const conv of convs) {
-    for (const msg of conv.messages) {
-      if (msg.capturedAt > cursor) {
-        records.push({
-          id: msg.id,
-          conversationId: conv.id,
-          platform: conv.platform,
-          url: conv.url,
-          title: conv.title,
-          role: msg.role,
-          content: msg.content,
-          capturedAt: msg.capturedAt,
-          seq: msg.seq,
-        });
-      }
-    }
+  for (const msg of messages) {
+    const conv = convMap.get(msg.conversationId);
+    if (!conv) continue;
+    records.push({
+      id: msg.id,
+      conversationId: msg.conversationId,
+      platform: msg.platform,
+      url: conv.url,
+      title: conv.title,
+      role: msg.role,
+      content: msg.content,
+      capturedAt: msg.capturedAt,
+      seq: msg.seq,
+    });
   }
 
   return records.sort((a, b) => a.capturedAt - b.capturedAt || a.seq - b.seq);

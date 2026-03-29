@@ -1,5 +1,11 @@
 export type Platform = 'claude' | 'chatgpt' | 'gemini';
 
+// ── Wire format (content script → background) ─────────────────────────────────
+
+/**
+ * Minimal message shape sent over chrome.runtime.sendMessage.
+ * background assigns id + seq before persisting.
+ */
 export interface Message {
   id: string;          // UUID — stable identity for dedup across exports
   seq: number;         // 0-indexed position within the conversation
@@ -8,20 +14,54 @@ export interface Message {
   capturedAt: number;  // Unix ms — used as incremental export cursor
 }
 
-export interface Conversation {
+// ── Storage types (IndexedDB) ─────────────────────────────────────────────────
+
+/**
+ * Conversation metadata stored in the 'conversations' IDB store.
+ * Does NOT contain messages — those live in the 'messages' store.
+ */
+export interface ConversationMeta {
   id: string;
   platform: Platform;
   url: string;
   title: string;
-  messages: Message[];
   createdAt: number;
   updatedAt: number;
+  messageCount: number;  // denormalized — avoids loading messages just to show a count
 }
 
-// chrome.storage.local layout:
-//   "conversations" → ConversationsIndex
-//   "conv:{id}"     → Conversation
-//   "meta"          → Meta
+/**
+ * Flat message record stored in the 'messages' IDB store.
+ * Indexed by conversationId, capturedAt, platform.
+ * platform is denormalized so cross-conversation queries don't need a join.
+ */
+export interface StoredMessage {
+  id: string;
+  conversationId: string;
+  platform: Platform;   // denormalized from ConversationMeta
+  seq: number;
+  role: 'user' | 'assistant';
+  content: string;
+  capturedAt: number;
+}
+
+/**
+ * Assembled conversation — ConversationMeta + its messages.
+ * Not stored directly; constructed on demand for display or export.
+ */
+export type Conversation = ConversationMeta & { messages: StoredMessage[] };
+
+// ── Storage layout ────────────────────────────────────────────────────────────
+// chrome.storage.local:
+//   "conversations"  → ConversationsIndex  (ordered id list, max 100)
+//   "meta"           → Meta
+//   "settings"       → AppSettings
+//
+// IndexedDB 'recall' v3:
+//   'handles'        → FileSystemDirectoryHandle  (key: 'exportDir')
+//   'conversations'  → ConversationMeta           (key: id)
+//   'messages'       → StoredMessage              (key: id, indexes: conversationId, capturedAt, platform)
+
 export interface ConversationsIndex {
   ids: string[]; // oldest → newest, max 100
 }

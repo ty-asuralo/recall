@@ -1,19 +1,25 @@
 import { getSettings } from './shared/settings';
 import {
-  deleteConversations,
-  getConversation,
-  getConversations,
+  deleteConversationMetas,
+  deleteMessagesByConversations,
+  getConversationMeta,
+  getConversationMetas,
   getExportDir,
+  getMessagesByConversation,
+  getMessagesAfterCursor,
   migrateConversationsFromStorage,
-  saveConversation,
+  migrateMessagesToFlatStore,
+  saveConversationMeta,
+  saveMessage,
 } from './shared/idb';
 import type {
   CaptureMessagePayload,
-  Conversation,
+  ConversationMeta,
   ConversationsIndex,
   ExportRecord,
   ExtensionMessage,
   Meta,
+  StoredMessage,
 } from './shared/types';
 
 const MAX_CONVERSATIONS = 100;
@@ -46,44 +52,58 @@ async function handleCapture(payload: CaptureMessagePayload): Promise<void> {
   if (!settings.capture.roles.includes(message.role)) return;
 
   const now = Date.now();
-
   const index = await getIndex();
-  let conv = await getConversation(conversationId);
 
-  if (!conv) {
+  let meta = await getConversationMeta(conversationId);
+
+  if (!meta) {
     const existingId = await findConvIdByUrl(index, url);
-    if (existingId) conv = await getConversation(existingId);
+    if (existingId) meta = await getConversationMeta(existingId);
   }
 
-  if (!conv) {
-    conv = { id: conversationId, platform, url, title, messages: [], createdAt: now, updatedAt: now };
+  if (!meta) {
+    meta = { id: conversationId, platform, url, title, createdAt: now, updatedAt: now, messageCount: 0 };
   }
 
-  const isDuplicate = conv.messages.some(
+  // Dedup: check existing messages for this conversation
+  const existing = await getMessagesByConversation(meta.id);
+  const isDuplicate = existing.some(
     (m) => m.role === message.role && m.content === message.content,
   );
   if (isDuplicate) return;
 
-  const newMessage = { ...message, id: crypto.randomUUID(), seq: conv.messages.length };
-  conv.messages.push(newMessage);
-  conv.updatedAt = now;
-  conv.title = title || conv.title;
-  conv.url = url;
+  const newMessage: StoredMessage = {
+    id: crypto.randomUUID(),
+    conversationId: meta.id,
+    platform: meta.platform,
+    seq: meta.messageCount,
+    role: message.role,
+    content: message.content,
+    capturedAt: message.capturedAt,
+  };
 
-  if (!index.ids.includes(conv.id)) index.ids.push(conv.id);
+  meta.messageCount += 1;
+  meta.updatedAt = now;
+  meta.title = title || meta.title;
+  meta.url = url;
+
+  if (!index.ids.includes(meta.id)) index.ids.push(meta.id);
 
   const evicted = index.ids.splice(0, Math.max(0, index.ids.length - MAX_CONVERSATIONS));
-  if (evicted.length > 0) await deleteConversations(evicted);
+  if (evicted.length > 0) {
+    await deleteConversationMetas(evicted);
+    await deleteMessagesByConversations(evicted);
+  }
 
-  const meta = await getMeta();
-
-  await saveConversation(conv);
+  const storedMeta = await getMeta();
+  await saveConversationMeta(meta);
+  await saveMessage(newMessage);
   await chrome.storage.local.set({
     [KEY_INDEX]: index,
-    [KEY_META]: { version: 1, lastUpdated: now, lastExportedAt: meta?.lastExportedAt ?? 0 },
+    [KEY_META]: { version: 1, lastUpdated: now, lastExportedAt: storedMeta?.lastExportedAt ?? 0 },
   });
 
-  console.log(`[recall] stored msg ${newMessage.id} seq=${newMessage.seq} conv=${conv.id}`);
+  console.log(`[recall] stored msg ${newMessage.id} seq=${newMessage.seq} conv=${meta.id}`);
 }
 
 // ── Auto export alarm ─────────────────────────────────────────────────────────
@@ -112,6 +132,7 @@ async function scheduleAutoExportAlarm(): Promise<void> {
 chrome.runtime.onInstalled.addListener((details) => {
   void scheduleAutoExportAlarm();
   void migrateConversationsFromStorage();
+  void migrateMessagesToFlatStore();
   if (details.reason === 'install') {
     void chrome.windows.create({
       url: chrome.runtime.getURL('popup/onboarding.html'),
@@ -124,6 +145,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onStartup.addListener(() => {
   void scheduleAutoExportAlarm();
   void migrateConversationsFromStorage();
+  void migrateMessagesToFlatStore();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -135,7 +157,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 async function runAutoExport(): Promise<void> {
   const settings = await getSettings();
   if (!settings.export.autoExport) return;
-  if (settings.export.defaultMethod !== 'local') return; // only local supported currently
+  if (settings.export.defaultMethod !== 'local') return;
 
   const records = await collectNewRecords();
   if (records.length === 0) {
@@ -160,28 +182,37 @@ async function runAutoExport(): Promise<void> {
   console.log('[recall] auto-export complete:', written.join(', '));
 }
 
-// ── Export helpers (shared with popup via duplication) ────────────────────────
+// ── Export helpers ────────────────────────────────────────────────────────────
 
 async function collectNewRecords(): Promise<ExportRecord[]> {
   const meta = await getMeta();
   const cursor = meta?.lastExportedAt ?? 0;
-  const index = await getIndex();
-  if (index.ids.length === 0) return [];
 
-  const convs = await getConversations(index.ids);
+  const messages = await getMessagesAfterCursor(cursor);
+  if (messages.length === 0) return [];
+
+  // Join with ConversationMeta to get url + title for each message
+  const convIds = [...new Set(messages.map((m) => m.conversationId))];
+  const convMetas = await getConversationMetas(convIds);
+  const convMap = new Map(convMetas.map((c) => [c.id, c]));
+
   const records: ExportRecord[] = [];
-
-  for (const conv of convs) {
-    for (const msg of conv.messages) {
-      if (msg.capturedAt > cursor) {
-        records.push({
-          id: msg.id, conversationId: conv.id, platform: conv.platform,
-          url: conv.url, title: conv.title, role: msg.role,
-          content: msg.content, capturedAt: msg.capturedAt, seq: msg.seq,
-        });
-      }
-    }
+  for (const msg of messages) {
+    const conv = convMap.get(msg.conversationId);
+    if (!conv) continue;
+    records.push({
+      id: msg.id,
+      conversationId: msg.conversationId,
+      platform: msg.platform,
+      url: conv.url,
+      title: conv.title,
+      role: msg.role,
+      content: msg.content,
+      capturedAt: msg.capturedAt,
+      seq: msg.seq,
+    });
   }
+
   return records.sort((a, b) => a.capturedAt - b.capturedAt || a.seq - b.seq);
 }
 
@@ -223,8 +254,8 @@ async function writeExportFiles(
 
 async function findConvIdByUrl(index: ConversationsIndex, url: string): Promise<string | null> {
   if (index.ids.length === 0) return null;
-  const convs = await getConversations(index.ids);
-  return convs.find((c) => c.url === url)?.id ?? null;
+  const metas = await getConversationMetas(index.ids);
+  return metas.find((c) => c.url === url)?.id ?? null;
 }
 
 export async function getIndex(): Promise<ConversationsIndex> {
