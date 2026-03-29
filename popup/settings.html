@@ -160,6 +160,14 @@
       .save-status { font-size: 12px; color: #888; }
       .save-status.success { color: #1a7a3a; }
       .save-status.error { color: #c00; }
+
+      .storage-stats { margin: 16px 0 4px; padding: 10px 12px; background: #f7f7f7; border-radius: 6px; font-size: 12px; color: #555; }
+      .storage-stats-label { font-weight: 500; margin-bottom: 6px; }
+      .storage-bar-track { height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+      .storage-bar-fill { height: 100%; background: #111; border-radius: 3px; transition: width 0.3s; }
+      .storage-bar-fill.warn { background: #d97706; }
+      .storage-bar-fill.danger { background: #c00; }
+      .storage-stats-text { color: #888; }
     </style>
   </head>
   <body>
@@ -262,6 +270,12 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="storage-stats" id="storage-stats" hidden>
+      <div class="storage-stats-label">Storage</div>
+      <div class="storage-bar-track"><div class="storage-bar-fill" id="storage-bar" style="width:0%"></div></div>
+      <div class="storage-stats-text" id="storage-stats-text">Loading…</div>
     </div>
 
     <div class="footer">

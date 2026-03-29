@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS, getSettings, saveSettings, validateSettings } from '../src/shared/settings';
 import type { AppSettings } from '../src/shared/types';
-import { getExportDir, saveExportDir } from './idb';
+import { getExportDir, getStorageStats, saveExportDir } from './idb';
 
 async function main(): Promise<void> {
   const settings = await getSettings();
@@ -128,6 +128,28 @@ async function main(): Promise<void> {
     await saveSettings(draft);
     showStatus('Saved.', 'success');
   });
+
+  // ── Storage stats ─────────────────────────────────────────────────────────
+
+  const statsEl = document.getElementById('storage-stats')!;
+  const barEl = document.getElementById('storage-bar')!;
+  const statsTextEl = document.getElementById('storage-stats-text')!;
+
+  try {
+    const { bytesUsed, quota } = await getStorageStats();
+    if (quota > 0) {
+      const pct = Math.min(100, (bytesUsed / quota) * 100);
+      const usedMB = (bytesUsed / 1024 / 1024).toFixed(1);
+      const quotaMB = (quota / 1024 / 1024).toFixed(0);
+      barEl.style.width = `${pct.toFixed(1)}%`;
+      if (pct >= 90) barEl.classList.add('danger');
+      else if (pct >= 70) barEl.classList.add('warn');
+      statsTextEl.textContent = `${usedMB} MB used of ${quotaMB} MB (${pct.toFixed(1)}%)`;
+      statsEl.hidden = false;
+    }
+  } catch {
+    // storage estimate unavailable — hide the widget
+  }
 }
 
 void main();

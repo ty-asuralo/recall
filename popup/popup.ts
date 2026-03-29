@@ -1,4 +1,5 @@
 import { getSettings } from '../src/shared/settings';
+import { getConversations } from '../src/shared/idb';
 import type { Conversation, ConversationsIndex, Meta, Platform } from '../src/shared/types';
 
 interface ConvDisplay {
@@ -19,9 +20,7 @@ async function loadAll(): Promise<{ conversations: Conversation[]; meta: Meta | 
   const index = result['conversations'] as ConversationsIndex | undefined;
   const meta = result['meta'] as Meta | undefined;
   if (!index || index.ids.length === 0) return { conversations: [], meta };
-  const keys = index.ids.map((id) => `conv:${id}`);
-  const convData = await chrome.storage.local.get(keys);
-  const conversations = keys.map((k) => convData[k] as Conversation).filter(Boolean);
+  const conversations = await getConversations(index.ids);
   return { conversations, meta };
 }
 

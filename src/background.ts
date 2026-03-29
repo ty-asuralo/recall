@@ -1,5 +1,12 @@
 import { getSettings } from './shared/settings';
-import { getExportDir } from './shared/idb';
+import {
+  deleteConversations,
+  getConversation,
+  getConversations,
+  getExportDir,
+  migrateConversationsFromStorage,
+  saveConversation,
+} from './shared/idb';
 import type {
   CaptureMessagePayload,
   Conversation,
@@ -13,7 +20,6 @@ const MAX_CONVERSATIONS = 100;
 const KEY_INDEX = 'conversations';
 const KEY_META = 'meta';
 const ALARM_NAME = 'autoExport';
-const convKey = (id: string) => `conv:${id}`;
 
 // ── Serial queue ──────────────────────────────────────────────────────────────
 // Prevents concurrent storage read/write races when many messages arrive at once.
@@ -67,11 +73,12 @@ async function handleCapture(payload: CaptureMessagePayload): Promise<void> {
   if (!index.ids.includes(conv.id)) index.ids.push(conv.id);
 
   const evicted = index.ids.splice(0, Math.max(0, index.ids.length - MAX_CONVERSATIONS));
-  if (evicted.length > 0) await chrome.storage.local.remove(evicted.map(convKey));
+  if (evicted.length > 0) await deleteConversations(evicted);
 
   const meta = await getMeta();
+
+  await saveConversation(conv);
   await chrome.storage.local.set({
-    [convKey(conv.id)]: conv,
     [KEY_INDEX]: index,
     [KEY_META]: { version: 1, lastUpdated: now, lastExportedAt: meta?.lastExportedAt ?? 0 },
   });
@@ -104,6 +111,7 @@ async function scheduleAutoExportAlarm(): Promise<void> {
 
 chrome.runtime.onInstalled.addListener((details) => {
   void scheduleAutoExportAlarm();
+  void migrateConversationsFromStorage();
   if (details.reason === 'install') {
     void chrome.windows.create({
       url: chrome.runtime.getURL('popup/onboarding.html'),
@@ -113,7 +121,10 @@ chrome.runtime.onInstalled.addListener((details) => {
     });
   }
 });
-chrome.runtime.onStartup.addListener(() => { void scheduleAutoExportAlarm(); });
+chrome.runtime.onStartup.addListener(() => {
+  void scheduleAutoExportAlarm();
+  void migrateConversationsFromStorage();
+});
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) {
@@ -157,13 +168,10 @@ async function collectNewRecords(): Promise<ExportRecord[]> {
   const index = await getIndex();
   if (index.ids.length === 0) return [];
 
-  const keys = index.ids.map(convKey);
-  const result = await chrome.storage.local.get(keys);
+  const convs = await getConversations(index.ids);
   const records: ExportRecord[] = [];
 
-  for (const id of index.ids) {
-    const conv = result[convKey(id)] as Conversation | undefined;
-    if (!conv) continue;
+  for (const conv of convs) {
     for (const msg of conv.messages) {
       if (msg.capturedAt > cursor) {
         records.push({
@@ -215,23 +223,13 @@ async function writeExportFiles(
 
 async function findConvIdByUrl(index: ConversationsIndex, url: string): Promise<string | null> {
   if (index.ids.length === 0) return null;
-  const keys = index.ids.map(convKey);
-  const result = await chrome.storage.local.get(keys);
-  for (const id of index.ids) {
-    const conv = result[convKey(id)] as Conversation | undefined;
-    if (conv?.url === url) return id;
-  }
-  return null;
+  const convs = await getConversations(index.ids);
+  return convs.find((c) => c.url === url)?.id ?? null;
 }
 
 export async function getIndex(): Promise<ConversationsIndex> {
   const result = await chrome.storage.local.get(KEY_INDEX);
   return (result[KEY_INDEX] as ConversationsIndex | undefined) ?? { ids: [] };
-}
-
-export async function getConversation(id: string): Promise<Conversation | undefined> {
-  const result = await chrome.storage.local.get(convKey(id));
-  return result[convKey(id)] as Conversation | undefined;
 }
 
 export async function getMeta(): Promise<Meta | undefined> {

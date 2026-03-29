@@ -1,6 +1,6 @@
 import { getSettings } from '../src/shared/settings';
-import type { Conversation, ConversationsIndex, ExportRecord, Meta } from '../src/shared/types';
-import { getExportDir } from './idb';
+import type { ConversationsIndex, ExportRecord, Meta } from '../src/shared/types';
+import { getConversations, getExportDir } from './idb';
 
 async function collectNewRecords(): Promise<ExportRecord[]> {
   const result = await chrome.storage.local.get(['conversations', 'meta']);
@@ -10,13 +10,10 @@ async function collectNewRecords(): Promise<ExportRecord[]> {
 
   if (!index || index.ids.length === 0) return [];
 
-  const keys = index.ids.map((id) => `conv:${id}`);
-  const convData = await chrome.storage.local.get(keys);
-
+  const convs = await getConversations(index.ids);
   const records: ExportRecord[] = [];
-  for (const id of index.ids) {
-    const conv = convData[`conv:${id}`] as Conversation | undefined;
-    if (!conv) continue;
+
+  for (const conv of convs) {
     for (const msg of conv.messages) {
       if (msg.capturedAt > cursor) {
         records.push({
