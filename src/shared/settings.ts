@@ -8,7 +8,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     maxConversationsPerPlatform: 10,
   },
   capture: {
-    roles: ['user'],
+    roles: ['user', 'assistant'],
   },
   export: {
     defaultMethod: 'local',

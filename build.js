@@ -31,7 +31,7 @@ const contentCtx = await esbuild.context({
 // Popup scripts — IIFE loaded by HTML pages
 const popupCtx = await esbuild.context({
   ...shared,
-  entryPoints: ['popup/popup.ts', 'popup/export.ts', 'popup/settings.ts', 'popup/onboarding.ts'],
+  entryPoints: ['popup/popup.ts', 'popup/export.ts', 'popup/settings.ts', 'popup/onboarding.ts', 'popup/conversations.ts'],
   outdir: 'dist',
   format: 'iife',
 });

@@ -16,15 +16,15 @@ function getTitle(): string {
 console.log('[recall] chatgpt content script loaded');
 
 async function init(): Promise<void> {
-  const settings = await getSettings();
-  const captureRoles = settings.capture.roles;
-  console.log('[recall] chatgpt init started', allSelectors.chatgpt, 'captureRoles:', captureRoles);
+  console.log('[recall] chatgpt init started', allSelectors.chatgpt);
 
   createExtractor({
     platform: 'chatgpt',
     selectors: allSelectors.chatgpt,
-    onMessage: (message) => {
-      if (!captureRoles.includes(message.role)) return;
+    onMessage: async (message) => {
+      let capture;
+      try { ({ capture } = await getSettings()); } catch { return; }
+      if (!capture.roles.includes(message.role)) return;
       const conversationId = getConversationId();
       if (!conversationId) return;
       console.log('[recall] chatgpt captured:', message);

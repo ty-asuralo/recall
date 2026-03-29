@@ -5,7 +5,7 @@ type RawMessage = Omit<Message, 'id' | 'seq'>;
 export interface ExtractorOptions {
   platform: Platform;
   selectors: PlatformSelectors;
-  onMessage: (message: RawMessage) => void;
+  onMessage: (message: RawMessage) => void | Promise<void>;
 }
 
 const DEBOUNCE_MS = 600;
@@ -100,8 +100,15 @@ export function extractMessages(root: Document | Element, selectors: PlatformSel
   const combined = parts.map((p) => p.sel).join(', ');
   for (const el of Array.from(root.querySelectorAll(combined))) {
     const role = parts.find((p) => el.matches(p.sel))?.role ?? 'user';
-    const textEl = selectors.textContent ? el.querySelector(selectors.textContent) : el;
-    const content = (textEl ?? el).textContent?.trim() ?? '';
+    let content: string;
+    if (selectors.textContent) {
+      const textEls = Array.from(el.querySelectorAll(selectors.textContent));
+      content = textEls.length > 0
+        ? textEls.map((e) => e.textContent?.trim() ?? '').filter(Boolean).join('\n\n')
+        : el.textContent?.trim() ?? '';
+    } else {
+      content = el.textContent?.trim() ?? '';
+    }
     if (content) messages.push({ role, content, capturedAt: now });
   }
 

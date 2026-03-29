@@ -152,6 +152,14 @@ async function main(): Promise<void> {
 
   render(groups, totalExportable);
 
+  document.getElementById('menu-browse')!.addEventListener('click', () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+      if (tab?.windowId !== undefined) {
+        void chrome.sidePanel.open({ windowId: tab.windowId });
+      }
+    });
+  });
+
   document.getElementById('menu-about')!.addEventListener('click', () => {
     chrome.windows.create({
       url: chrome.runtime.getURL('popup/about.html'),

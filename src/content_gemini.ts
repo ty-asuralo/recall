@@ -16,15 +16,15 @@ function getTitle(): string {
 console.log('[recall] gemini content script loaded');
 
 async function init(): Promise<void> {
-  const settings = await getSettings();
-  const captureRoles = settings.capture.roles;
-  console.log('[recall] gemini init started', allSelectors.gemini, 'captureRoles:', captureRoles);
+  console.log('[recall] gemini init started', allSelectors.gemini);
 
   createExtractor({
     platform: 'gemini',
     selectors: allSelectors.gemini,
-    onMessage: (message) => {
-      if (!captureRoles.includes(message.role)) return;
+    onMessage: async (message) => {
+      let capture;
+      try { ({ capture } = await getSettings()); } catch { return; }
+      if (!capture.roles.includes(message.role)) return;
       const conversationId = getConversationId();
       if (!conversationId) return;
 

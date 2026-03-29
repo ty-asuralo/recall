@@ -19,15 +19,15 @@ function getTitle(): string {
 console.log('[recall] content script loaded');
 
 async function init(): Promise<void> {
-  const settings = await getSettings();
-  const captureRoles = settings.capture.roles;
-  console.log('[recall] init started', allSelectors.claude, 'captureRoles:', captureRoles);
+  console.log('[recall] init started', allSelectors.claude);
 
   createExtractor({
     platform: 'claude',
     selectors: allSelectors.claude,
-    onMessage: (message) => {
-      if (!captureRoles.includes(message.role)) return;
+    onMessage: async (message) => {
+      let capture;
+      try { ({ capture } = await getSettings()); } catch { return; }
+      if (!capture.roles.includes(message.role)) return;
       const conversationId = getConversationId();
       if (!conversationId) return; // still on /new, no conversation yet
       console.log('[recall] captured:', message);
