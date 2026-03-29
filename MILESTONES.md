@@ -85,3 +85,44 @@ First working end-to-end version of Recall. Captures user messages from Claude.a
 ### What's not yet done
 - S3 export (UI placeholder, not implemented)
 - Query/retrieval layer above the exported JSONL
+
+---
+
+## v0.4.0 — Favorites, side panel, and inline star buttons (2026-03-29)
+
+### What's in it
+
+**Favorites**
+- Star buttons (`☆`/`★`) injected into every captured message on the page via `src/injector.ts`
+- User messages: star appears below the bubble (right-aligned); assistant messages: star appears inline in the platform action bar when `selectors.actionBar` is set, otherwise below the bubble (left-aligned)
+- Gemini star placed inline inside `.buttons-container-v2` (Angular DOM is stable); Claude and ChatGPT use below-bubble fallback (React re-renders remove injected nodes)
+- Injection skipped while streaming indicator is visible (incomplete responses)
+- Initial `★`/`☆` state hydrated from IDB on conversation load via `GET_FAVORITES` message
+- Content extracted at click time (not injection time) so the string always matches IDB exactly, even after action buttons render inside the container post-stream
+- `extractContent` clones the element and strips `.recall-star-wrap`/`[data-recall-btn]` nodes before text extraction to prevent star characters contaminating the content string
+- `handleToggleFavorite` creates a stub `StoredMessage` in IDB when the message isn't found by content match, so favorites always persist regardless of capture timing or content drift
+
+**Favorites tab in side panel**
+- Gold `★ Favorites` tab in the panel filter bar (right-aligned, always gold)
+- Flat list of all favorited messages across platforms, sorted newest-first
+- Click a favorite to open a detail view; unstarring navigates back to the list
+
+**Auto-refresh panel on page star toggle**
+- After a star click, injector broadcasts `FAVORITES_UPDATED` to all extension pages
+- Panel `onMessage` listener reloads favorites + re-renders immediately — no manual navigation needed
+- Manual `⟳` refresh button in the filter bar as a fallback
+
+**Side panel conversation browser** (v0.3.x addition, now complete)
+- Full conversation thread view with per-message star buttons
+- Platform filter tabs: All / Claude / ChatGPT / Gemini / ★ Favorites
+- Settings and Export panels always render even if IDB/storage load fails
+
+**New message types**
+- `TOGGLE_FAVORITE` — content script → background, toggles favorite by exact content match
+- `GET_FAVORITES` — content script → background, returns favorited content strings for a conversation
+- `FAVORITES_UPDATED` — content script → panel broadcast after any toggle
+
+### What's not yet done
+- S3 export (UI placeholder, not implemented)
+- Query/retrieval layer above the exported JSONL
+- Inline action bar star for Claude and ChatGPT (React re-renders remove injected nodes)
