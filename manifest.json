@@ -5,7 +5,7 @@
   "description": "Capture your AI conversations from Claude, ChatGPT, and Gemini as a portable memory layer.",
   "permissions": ["storage", "unlimitedStorage", "windows", "tabs", "alarms", "sidePanel"],
   "side_panel": {
-    "default_path": "popup/conversations.html"
+    "default_path": "popup/panel.html"
   },
   "host_permissions": [
     "https://claude.ai/*",

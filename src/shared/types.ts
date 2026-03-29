@@ -43,6 +43,7 @@ export interface StoredMessage {
   role: 'user' | 'assistant';
   content: string;
   capturedAt: number;
+  favorite?: boolean;   // sparse — only present when true; indexed for fast favorites query
 }
 
 /**

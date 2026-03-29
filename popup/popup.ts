@@ -152,7 +152,7 @@ async function main(): Promise<void> {
 
   render(groups, totalExportable);
 
-  document.getElementById('menu-browse')!.addEventListener('click', () => {
+  document.getElementById('open-panel')!.addEventListener('click', () => {
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
       if (tab?.windowId !== undefined) {
         void chrome.sidePanel.open({ windowId: tab.windowId });
@@ -160,30 +160,15 @@ async function main(): Promise<void> {
     });
   });
 
-  document.getElementById('menu-about')!.addEventListener('click', () => {
-    chrome.windows.create({
-      url: chrome.runtime.getURL('popup/about.html'),
-      type: 'popup',
-      width: 380,
-      height: 300,
-    });
-  });
-
-  document.getElementById('menu-settings')!.addEventListener('click', () => {
-    chrome.windows.create({
-      url: chrome.runtime.getURL('popup/settings.html'),
-      type: 'popup',
-      width: 380,
-      height: 420,
-    });
-  });
-
   document.getElementById('export-trigger')!.addEventListener('click', () => {
-    chrome.windows.create({
-      url: chrome.runtime.getURL('popup/export.html'),
-      type: 'popup',
-      width: 400,
-      height: 440,
+    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+      if (tab?.windowId !== undefined) {
+        void chrome.sidePanel.open({ windowId: tab.windowId });
+        // Ask the panel to navigate to export tab
+        setTimeout(() => {
+          void chrome.runtime.sendMessage({ type: 'PANEL_NAV', view: 'export' });
+        }, 300);
+      }
     });
   });
 }

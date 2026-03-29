@@ -5,10 +5,12 @@ export {
   getConversationMeta,
   getConversationMetas,
   getExportDir,
+  getFavoriteMessages,
   getMessagesAfterCursor,
   getMessagesByConversation,
   getStorageStats,
   saveConversationMeta,
   saveExportDir,
   saveMessage,
+  setMessageFavorite,
 } from '../src/shared/idb';

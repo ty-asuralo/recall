@@ -1,15 +1,16 @@
 // IndexedDB helpers for Recall.
 //
-// DB: 'recall', version 3
+// DB: 'recall', version 4
 //   Store 'handles'       — FileSystemDirectoryHandle  (key: 'exportDir')
 //   Store 'conversations' — ConversationMeta           (key: id)
 //   Store 'messages'      — StoredMessage              (key: id)
 //                           indexes: conversationId, capturedAt, platform
+//                           favorite field scanned in-memory (booleans not valid IDB keys)
 
 import type { ConversationMeta, StoredMessage } from './types';
 
 const DB_NAME = 'recall';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_HANDLES = 'handles';
 const STORE_CONVS = 'conversations';
 const STORE_MESSAGES = 'messages';
@@ -35,6 +36,10 @@ function openDB(): Promise<IDBDatabase> {
         msgStore.createIndex('conversationId', 'conversationId', { unique: false });
         msgStore.createIndex('capturedAt', 'capturedAt', { unique: false });
         msgStore.createIndex('platform', 'platform', { unique: false });
+      }
+      if (oldVersion < 4) {
+        // v4: favorite field added to StoredMessage. No schema change needed —
+        // getFavoriteMessages uses a full scan since boolean is not a valid IDB key type.
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -153,6 +158,39 @@ export async function getMessagesAfterCursor(cursor: number): Promise<StoredMess
     const req = index.getAll(IDBKeyRange.lowerBound(cursor, true));
     req.onsuccess = () => resolve(req.result as StoredMessage[]);
     req.onerror = () => reject(req.error);
+  });
+}
+
+/** Returns all favorited messages across all conversations. */
+export async function getFavoriteMessages(): Promise<StoredMessage[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_MESSAGES, 'readonly');
+    const req = tx.objectStore(STORE_MESSAGES).getAll();
+    req.onsuccess = () => resolve((req.result as StoredMessage[]).filter((m) => m.favorite === true));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/** Sets or clears the favorite flag on a message. */
+export async function setMessageFavorite(id: string, favorite: boolean): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_MESSAGES, 'readwrite');
+    const store = tx.objectStore(STORE_MESSAGES);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const msg = req.result as StoredMessage | undefined;
+      if (!msg) { resolve(); return; }
+      if (favorite) {
+        msg.favorite = true;
+      } else {
+        delete msg.favorite;
+      }
+      store.put(msg, msg.id);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
   });
 }
 

@@ -44,22 +44,16 @@
       }
       .header-badge.none { background: #eee; color: #888; }
 
-      /* ── Menu ── */
-      .menu {
-        display: flex;
-        border-bottom: 1px solid #f0f0f0;
-      }
-      .menu-item {
-        flex: 1;
+      /* ── Open panel button ── */
+      .open-panel-btn {
+        width: 100%;
         padding: 8px 0;
-        background: none; border: none;
+        background: none; border: none; border-bottom: 1px solid #f0f0f0;
         font-size: 12px; color: #555;
         cursor: pointer; text-align: center;
-        border-right: 1px solid #f0f0f0;
         transition: background 0.1s, color 0.1s;
       }
-      .menu-item:last-child { border-right: none; }
-      .menu-item:hover { background: #fafafa; color: #111; }
+      .open-panel-btn:hover { background: #fafafa; color: #111; }
 
       /* ── Conversations ── */
       .conversations { padding: 8px 0; }
@@ -143,12 +137,8 @@
       <div id="header-badge" class="header-badge none">0 new</div>
     </header>
 
-    <!-- Menu -->
-    <nav class="menu">
-      <button class="menu-item" id="menu-browse">Browse</button>
-      <button class="menu-item" id="menu-settings">Settings</button>
-      <button class="menu-item" id="menu-about">About</button>
-    </nav>
+    <!-- Open panel -->
+    <button class="open-panel-btn" id="open-panel">Open Panel →</button>
 
     <div class="conversations" id="conversations"></div>
 
