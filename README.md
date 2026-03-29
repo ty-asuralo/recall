@@ -57,6 +57,8 @@ flowchart LR
 ## Features
 
 - **Selective capture** — choose to capture your own messages, model responses, or both
+- **Favorites** — star any message on the page or in the panel to bookmark it; a dedicated Favorites tab surfaces all starred messages across platforms
+- **Side panel** — browse your full conversation history, search by platform, and view message threads without leaving the tab
 - **Incremental export** — only new messages are exported each time, no duplicates
 - **Auto export** — optionally export every night at 11:59 PM automatically
 - **Local filesystem** — exports go to a folder you choose via the File System Access API
@@ -108,7 +110,7 @@ To run from source:
 
 - [ ] Query/retrieval layer — semantic search over your captured history
 - [ ] S3 export
-- [ ] Chrome Web Store publication
+- [x] Chrome Web Store publication
 
 ## Why local-first?
 
