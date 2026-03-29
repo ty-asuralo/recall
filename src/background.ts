@@ -11,6 +11,7 @@ import {
   migrateMessagesToFlatStore,
   saveConversationMeta,
   saveMessage,
+  setMessageFavorite,
 } from './shared/idb';
 import type {
   CaptureMessagePayload,
@@ -18,8 +19,10 @@ import type {
   ConversationsIndex,
   ExportRecord,
   ExtensionMessage,
+  GetFavoritesPayload,
   Meta,
   StoredMessage,
+  ToggleFavoritePayload,
 } from './shared/types';
 
 const MAX_CONVERSATIONS = 100;
@@ -38,9 +41,25 @@ function enqueue(fn: () => Promise<void>): void {
 // ── Message capture ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener(
-  (message: ExtensionMessage, _sender, _sendResponse) => {
+  (message: ExtensionMessage, _sender, sendResponse) => {
     if (message.type === 'CAPTURE_MESSAGE') {
       enqueue(() => handleCapture(message));
+      return false;
+    }
+    if (message.type === 'TOGGLE_FAVORITE') {
+      handleToggleFavorite(message)
+        .then((res) => sendResponse(res))
+        .catch((err) => {
+          console.error('[recall] toggle favorite error:', err);
+          sendResponse({ favorited: false });
+        });
+      return true; // keep message channel open for async sendResponse
+    }
+    if (message.type === 'GET_FAVORITES') {
+      handleGetFavorites(message)
+        .then((res) => sendResponse(res))
+        .catch(() => sendResponse({ contents: [] }));
+      return true;
     }
   },
 );
@@ -104,6 +123,46 @@ async function handleCapture(payload: CaptureMessagePayload): Promise<void> {
   });
 
   console.log(`[recall] stored msg ${newMessage.id} seq=${newMessage.seq} conv=${meta.id}`);
+}
+
+// ── Favorite toggle ───────────────────────────────────────────────────────────
+
+async function handleToggleFavorite(
+  payload: ToggleFavoritePayload,
+): Promise<{ favorited: boolean }> {
+  const { conversationId, platform, role, content } = payload;
+  const messages = await getMessagesByConversation(conversationId);
+  let msg = messages.find((m) => m.role === role && m.content === content);
+
+  if (!msg) {
+    // Message not captured by extractor yet (e.g. content mismatch or extractor
+    // hasn't run). Create a stub so the user can favorite it immediately.
+    const now = Date.now();
+    msg = {
+      id: crypto.randomUUID(),
+      conversationId,
+      platform,
+      seq: messages.length,
+      role,
+      content,
+      capturedAt: now,
+    };
+    await saveMessage(msg);
+    console.log(`[recall] toggle favorite: created stub message ${msg.id} for conv ${conversationId}`);
+  }
+
+  const nowFavorited = !msg.favorite;
+  await setMessageFavorite(msg.id, nowFavorited);
+  console.log(`[recall] favorite ${nowFavorited ? 'set' : 'cleared'} for msg ${msg.id}`);
+  return { favorited: nowFavorited };
+}
+
+async function handleGetFavorites(
+  payload: GetFavoritesPayload,
+): Promise<{ contents: string[] }> {
+  const messages = await getMessagesByConversation(payload.conversationId);
+  const contents = messages.filter((m) => m.favorite === true).map((m) => m.content);
+  return { contents };
 }
 
 // ── Auto export alarm ─────────────────────────────────────────────────────────

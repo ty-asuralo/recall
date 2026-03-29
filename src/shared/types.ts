@@ -80,6 +80,10 @@ export interface PlatformSelectors {
   streamingIndicator: string;
   /** Optional: child selector within a message element to narrow text extraction (avoids capturing button labels) */
   textContent?: string;
+  /** Optional: selector for the action-button bar inside an assistant message element.
+   *  When set, the star button is appended there (next to copy/like/dislike).
+   *  Falls back to a div below the message if selector matches nothing. */
+  actionBar?: string;
 }
 
 export interface SelectorsFile {
@@ -152,4 +156,19 @@ export interface CaptureMessagePayload {
   url: string;
 }
 
-export type ExtensionMessage = CaptureMessagePayload;
+/** Sent from content scripts when the user clicks the star button injected into the page. */
+export interface ToggleFavoritePayload {
+  type: 'TOGGLE_FAVORITE';
+  platform: Platform;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string; // used to match the stored message by exact content
+}
+
+/** Sent from content scripts on load to hydrate star button state from IDB. */
+export interface GetFavoritesPayload {
+  type: 'GET_FAVORITES';
+  conversationId: string;
+}
+
+export type ExtensionMessage = CaptureMessagePayload | ToggleFavoritePayload | GetFavoritesPayload;

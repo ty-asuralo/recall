@@ -3,20 +3,23 @@
     "messageContainer": "",
     "userMessage": "[data-testid='user-message']",
     "assistantMessage": "",
-    "streamingIndicator": ""
+    "streamingIndicator": "",
+    "actionBar": ""
   },
   "chatgpt": {
     "messageContainer": "",
     "userMessage": "[data-message-author-role='user']",
     "assistantMessage": "[data-message-author-role='assistant']",
     "streamingIndicator": "[data-testid='stop-button']",
-    "textContent": ".whitespace-pre-wrap"
+    "textContent": ".whitespace-pre-wrap",
+    "actionBar": ""
   },
   "gemini": {
     "messageContainer": "",
     "userMessage": ".query-text",
     "assistantMessage": "model-response",
     "streamingIndicator": "[aria-label='Stop response']",
-    "textContent": ".query-text-line"
+    "textContent": ".query-text-line",
+    "actionBar": ""
   }
 }

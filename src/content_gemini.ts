@@ -1,4 +1,5 @@
 import { createExtractor } from './extractor';
+import { injectFavoriteButtons } from './injector';
 import { getSettings } from './shared/settings';
 import type { CaptureMessagePayload } from './shared/types';
 import allSelectors from '../selectors.json';
@@ -17,6 +18,15 @@ console.log('[recall] gemini content script loaded');
 
 async function init(): Promise<void> {
   console.log('[recall] gemini init started', allSelectors.gemini);
+
+  injectFavoriteButtons(
+    'gemini',
+    allSelectors.gemini,
+    getConversationId,
+    // Mirrors the "You said" strip applied to user messages before storage
+    (role, content) =>
+      role === 'user' ? content.replace(/^\s*You said\s+/i, '').trim() : content,
+  );
 
   createExtractor({
     platform: 'gemini',

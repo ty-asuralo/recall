@@ -1,4 +1,5 @@
 import { createExtractor } from './extractor';
+import { injectFavoriteButtons } from './injector';
 import { getSettings } from './shared/settings';
 import type { CaptureMessagePayload } from './shared/types';
 import allSelectors from '../selectors.json';
@@ -17,6 +18,8 @@ console.log('[recall] chatgpt content script loaded');
 
 async function init(): Promise<void> {
   console.log('[recall] chatgpt init started', allSelectors.chatgpt);
+
+  injectFavoriteButtons('chatgpt', allSelectors.chatgpt, getConversationId);
 
   createExtractor({
     platform: 'chatgpt',

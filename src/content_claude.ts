@@ -1,4 +1,5 @@
 import { createExtractor } from './extractor';
+import { injectFavoriteButtons } from './injector';
 import { getSettings } from './shared/settings';
 import type { CaptureMessagePayload } from './shared/types';
 // TODO: runtime fetch via chrome.runtime.getURL is blocked by claude.ai CSP.
@@ -20,6 +21,8 @@ console.log('[recall] content script loaded');
 
 async function init(): Promise<void> {
   console.log('[recall] init started', allSelectors.claude);
+
+  injectFavoriteButtons('claude', allSelectors.claude, getConversationId);
 
   createExtractor({
     platform: 'claude',
