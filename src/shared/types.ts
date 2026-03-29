@@ -171,4 +171,9 @@ export interface GetFavoritesPayload {
   conversationId: string;
 }
 
-export type ExtensionMessage = CaptureMessagePayload | ToggleFavoritePayload | GetFavoritesPayload;
+/** Broadcast from content scripts to all extension pages after a favorite is toggled. */
+export interface FavoritesUpdatedPayload {
+  type: 'FAVORITES_UPDATED';
+}
+
+export type ExtensionMessage = CaptureMessagePayload | ToggleFavoritePayload | GetFavoritesPayload | FavoritesUpdatedPayload;

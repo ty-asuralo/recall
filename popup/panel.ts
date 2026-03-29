@@ -16,8 +16,13 @@ function switchView(view: View): void {
 }
 
 chrome.runtime.onMessage.addListener((msg: unknown) => {
-  if (msg && typeof msg === 'object' && 'type' in msg && (msg as { type: string }).type === 'PANEL_NAV') {
+  if (!msg || typeof msg !== 'object' || !('type' in msg)) return;
+  const type = (msg as { type: string }).type;
+  if (type === 'PANEL_NAV') {
     switchView((msg as unknown as { view: View }).view);
+  }
+  if (type === 'FAVORITES_UPDATED') {
+    void loadFavorites().then(() => renderConvList());
   }
 });
 
@@ -251,6 +256,13 @@ function initConversationsView(): void {
       document.getElementById('thread-panel')!.hidden = true;
       renderConvList();
     });
+  });
+
+  document.getElementById('refresh-btn')!.addEventListener('click', async () => {
+    try {
+      await Promise.all([loadConversations(), loadFavorites()]);
+    } catch { /* ignore */ }
+    renderConvList();
   });
 
   document.getElementById('back-btn')!.addEventListener('click', () => {

@@ -75,7 +75,11 @@ export function injectFavoriteButtons(
       for (const el of Array.from(document.querySelectorAll<HTMLElement>(sel))) {
         if (role === 'assistant' && selectors.actionBar) {
           // Wait for the action bar — it only appears after streaming ends.
-          const bar = el.querySelector(selectors.actionBar);
+          // Check inside el first (Gemini: bar is inside model-response).
+          // Fall back to el.parentElement for platforms where the bar is a
+          // sibling of the message container (ChatGPT pattern).
+          const bar = el.querySelector(selectors.actionBar)
+            ?? el.parentElement?.querySelector(selectors.actionBar) ?? null;
           if (!bar) continue;
           if (el.getAttribute(INJECTED_ATTR)) continue;
 
@@ -203,6 +207,8 @@ function makeButton(
         btn.title = 'Save to Recall';
         btn.classList.remove('recall-starred');
       }
+      // Notify the Recall panel (if open) to refresh its favorites list.
+      void chrome.runtime.sendMessage({ type: 'FAVORITES_UPDATED' }).catch(() => { /* panel not open */ });
     } catch (err) {
       console.error('[recall] toggle favorite failed:', err);
     }
