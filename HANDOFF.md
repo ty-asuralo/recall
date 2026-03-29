@@ -158,6 +158,34 @@ All three platforms have `"actionBar": ""` (empty). Empty string means the fallb
 
 ---
 
+## Session 3 additions (2026-03-29)
+
+### 1. Auto-refresh panel on page star toggle (`src/injector.ts`, `popup/panel.ts`, `src/shared/types.ts`)
+
+**Problem:** Favoriting a message on the page (via injected star button) had no effect on the Recall side panel until the user manually navigated away and back.
+
+**Fix:** After a successful toggle in the injector click handler, broadcast `{ type: 'FAVORITES_UPDATED' }` to all extension pages:
+
+```typescript
+void chrome.runtime.sendMessage({ type: 'FAVORITES_UPDATED' }).catch(() => { /* panel not open */ });
+```
+
+The panel's `chrome.runtime.onMessage` listener handles this by reloading favorites from IDB and re-rendering:
+
+```typescript
+if (type === 'FAVORITES_UPDATED') {
+  void loadFavorites().then(() => renderConvList());
+}
+```
+
+Added `FavoritesUpdatedPayload` to `src/shared/types.ts` and included it in `ExtensionMessage`.
+
+### 2. Refresh button in panel (`popup/panel.html`, `popup/panel.ts`)
+
+Added a `⟳` button at the right end of the `.conv-filters` bar (after the Favorites tab). Clicking it calls `loadConversations() + loadFavorites()` then re-renders the list — useful as a manual fallback if the auto-refresh ever misses an update.
+
+---
+
 ## Current state
 
 - Build is clean (`npm run typecheck && npm run build` both pass)
@@ -166,6 +194,8 @@ All three platforms have `"actionBar": ""` (empty). Empty string means the fallb
 - Assistant message favoriting works on all three platforms (Claude ✓, ChatGPT ✓, Gemini ✓)
 - Star buttons for Claude model responses now appear (`.font-claude-response` selector)
 - Initial star state after page refresh works (GET_FAVORITES on conversation load)
+- Favoriting a message on the page now auto-refreshes the panel's Favorites tab immediately
+- Manual ⟳ refresh button available in the panel filter bar
 
 ---
 
