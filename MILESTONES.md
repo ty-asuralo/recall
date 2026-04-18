@@ -124,5 +124,38 @@ First working end-to-end version of Recall. Captures user messages from Claude.a
 
 ### What's not yet done
 - S3 export (UI placeholder, not implemented)
-- Query/retrieval layer above the exported JSONL
 - Inline action bar star for Claude and ChatGPT (React re-renders remove injected nodes)
+
+---
+
+## v0.5.0 — In-extension search via native messaging bridge (2026-04-14)
+
+### What's in it
+
+**Search UI**
+- New `popup/search.html` window opened from a Search button in the main popup
+- Query box with 200 ms debounce; platform / role / date filter chips
+- Result cards with mark-highlighted snippets, platform badge, conversation title, click-to-expand full thread
+- Empty / error / not-installed states; install prompt links to the `recall-bridge` helper
+- "Rebuild index" and "Test connection" controls in Settings
+
+**Native messaging bridge** (`chrome.runtime.connectNative`)
+- New `src/memory/bridgeProtocol.ts` defines the versioned JSON protocol: `ping`, `capabilities`, `ingest`, `search`, `conversation`
+- New `src/memory/bridgeClient.ts` in the background SW owns the single persistent port with request/response correlation, 10 s timeouts, and disconnect classification
+- Four new background message handlers: `SEARCH_QUERY`, `GET_CONVERSATION_FULL`, `TRIGGER_INGEST`, `GET_BRIDGE_STATUS`
+- Best-effort post-export ingest trigger so the backend stays current with each auto-export
+
+**Retrieval delegated to a local tool**
+- Recall never builds its own index; the sibling [`recall-bridge`](https://github.com/ty-asuralo/recall-bridge) helper routes queries to MemPalace (`mempalace search`) or GBrain (`gbrain search`) over stdio
+- The word "MemPalace" / "GBrain" never appears in the user-visible UI — backend name + version are pulled from `capabilities` at runtime
+- A `mock` backend ships in the bridge for extension-side development without either tool installed
+
+**Permission**
+- `manifest.json` adds `nativeMessaging`
+- Native messaging host name: `com.recall.bridge`
+
+### What's not yet done
+- S3 export (UI placeholder, not implemented)
+- Inline action bar star for Claude and ChatGPT (React re-renders remove injected nodes)
+- Live (sub-daily) ingest — today the bridge syncs after each auto-export; a per-capture push mode is deferred
+- Signed Windows installer for `recall-bridge`

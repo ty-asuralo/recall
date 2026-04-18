@@ -272,6 +272,40 @@
       </div>
     </div>
 
+    <!-- Search backend -->
+    <div class="category">
+      <div class="category-title">Search backend</div>
+
+      <div class="setting-row">
+        <div class="setting-label">Bridge status</div>
+        <div class="setting-hint">Recall Bridge is a local helper that indexes your conversations for search.</div>
+        <div class="setting-control" id="bridge-status-control">
+          <div class="field-display unset" id="bridge-status-display">Checking…</div>
+        </div>
+      </div>
+
+      <div class="setting-row" id="bridge-backend-row" hidden>
+        <div class="setting-label">Backend</div>
+        <div class="setting-control">
+          <div class="field-display" id="bridge-backend-display">—</div>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-control" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-choose" id="btn-test-connection">Test connection</button>
+          <button class="btn-choose" id="btn-rebuild-index">Rebuild index</button>
+        </div>
+        <div class="field-error" id="bridge-action-status" hidden></div>
+      </div>
+
+      <div class="setting-row" id="bridge-install-row" hidden>
+        <div class="setting-hint">
+          Bridge not found. <a href="https://github.com/ty-asuralo/recall-bridge/releases" target="_blank">Install Recall Bridge</a> to enable search.
+        </div>
+      </div>
+    </div>
+
     <div class="storage-stats" id="storage-stats" hidden>
       <div class="storage-stats-label">Storage</div>
       <div class="storage-bar-track"><div class="storage-bar-fill" id="storage-bar" style="width:0%"></div></div>

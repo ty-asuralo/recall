@@ -1,3 +1,4 @@
+import * as bridgeClient from './memory/bridgeClient';
 import { getSettings } from './shared/settings';
 import {
   deleteConversationMetas,
@@ -59,6 +60,42 @@ chrome.runtime.onMessage.addListener(
       handleGetFavorites(message)
         .then((res) => sendResponse(res))
         .catch(() => sendResponse({ contents: [] }));
+      return true;
+    }
+    if (message.type === 'SEARCH_QUERY') {
+      bridgeClient.search(message.query, message.opts)
+        .then((hits) => sendResponse({ ok: true, hits }))
+        .catch((error) => sendResponse({ ok: false, error }));
+      return true;
+    }
+    if (message.type === 'GET_CONVERSATION_FULL') {
+      bridgeClient.getConversation(message.conversationId)
+        .then((records) => sendResponse({ ok: true, records }))
+        .catch((error) => sendResponse({ ok: false, error }));
+      return true;
+    }
+    if (message.type === 'TRIGGER_INGEST') {
+      bridgeClient.ingest(message.rebuild)
+        .then((data) => sendResponse({ ok: true, data }))
+        .catch((error) => sendResponse({ ok: false, error }));
+      return true;
+    }
+    if (message.type === 'SET_BACKEND') {
+      bridgeClient.setBackend(message.backend)
+        .then((data) => sendResponse({ ok: true, data }))
+        .catch((error) => sendResponse({ ok: false, error }));
+      return true;
+    }
+    if (message.type === 'GET_BRIDGE_STATUS') {
+      bridgeClient.ping()
+        .then(async (ok) => {
+          const status = bridgeClient.getStatus();
+          const capabilities = ok ? await bridgeClient.getCapabilities().catch(() => null) : null;
+          sendResponse({ ok, status, capabilities });
+        })
+        .catch(() => {
+          sendResponse({ ok: false, status: bridgeClient.getStatus() });
+        });
       return true;
     }
   },
@@ -239,6 +276,7 @@ async function runAutoExport(): Promise<void> {
   const written = await writeExportFiles(dir, records);
   await advanceExportCursor();
   console.log('[recall] auto-export complete:', written.join(', '));
+  bridgeClient.ingest().catch(() => {});
 }
 
 // ── Export helpers ────────────────────────────────────────────────────────────

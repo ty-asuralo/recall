@@ -156,6 +156,7 @@ async function main(): Promise<void> {
     chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
       if (tab?.windowId !== undefined) {
         void chrome.sidePanel.open({ windowId: tab.windowId });
+        window.close();
       }
     });
   });

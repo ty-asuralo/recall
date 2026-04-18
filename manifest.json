@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Recall",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Capture your AI conversations from Claude, ChatGPT, and Gemini as a portable memory layer.",
-  "permissions": ["storage", "unlimitedStorage", "windows", "tabs", "alarms", "sidePanel"],
+  "permissions": ["storage", "unlimitedStorage", "windows", "alarms", "sidePanel", "nativeMessaging"],
   "side_panel": {
     "default_path": "popup/panel.html"
   },

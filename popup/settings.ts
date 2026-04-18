@@ -1,6 +1,10 @@
 import { DEFAULT_SETTINGS, getSettings, saveSettings, validateSettings } from '../src/shared/settings';
-import type { AppSettings } from '../src/shared/types';
+import type { AppSettings, BridgeStatus, Capabilities } from '../src/shared/types';
 import { getExportDir, getStorageStats, saveExportDir } from './idb';
+
+type BridgeStatusResponse =
+  | { ok: true; status: BridgeStatus; capabilities?: Capabilities }
+  | { ok: false; status?: BridgeStatus; error?: { code: string; message: string } };
 
 async function main(): Promise<void> {
   const settings = await getSettings();
@@ -127,6 +131,83 @@ async function main(): Promise<void> {
 
     await saveSettings(draft);
     showStatus('Saved.', 'success');
+  });
+
+  // ── Search backend ────────────────────────────────────────────────────────
+
+  const bridgeStatusDisplay = document.getElementById('bridge-status-display')!;
+  const bridgeBackendRow = document.getElementById('bridge-backend-row')!;
+  const bridgeBackendDisplay = document.getElementById('bridge-backend-display')!;
+  const bridgeInstallRow = document.getElementById('bridge-install-row')!;
+  const bridgeActionStatus = document.getElementById('bridge-action-status')!;
+  const btnTestConnection = document.getElementById('btn-test-connection') as HTMLButtonElement;
+  const btnRebuildIndex = document.getElementById('btn-rebuild-index') as HTMLButtonElement;
+
+  function applyBridgeStatus(resp: BridgeStatusResponse): void {
+    const status: BridgeStatus = resp.ok ? resp.status : (resp.status ?? 'error');
+    bridgeStatusDisplay.classList.remove('unset');
+    bridgeInstallRow.hidden = true;
+    bridgeBackendRow.hidden = true;
+
+    if (status === 'ready' && resp.ok && resp.capabilities) {
+      bridgeStatusDisplay.textContent = 'Ready';
+      bridgeBackendRow.hidden = false;
+      bridgeBackendDisplay.textContent = `${resp.capabilities.backend} ${resp.capabilities.backendVersion}`;
+    } else if (status === 'not-installed') {
+      bridgeStatusDisplay.textContent = 'Not installed';
+      bridgeStatusDisplay.classList.add('unset');
+      bridgeInstallRow.hidden = false;
+    } else if (status === 'error') {
+      const msg = (!resp.ok && resp.error) ? resp.error.message : 'Connection error';
+      bridgeStatusDisplay.textContent = `Error: ${msg}`;
+    } else {
+      bridgeStatusDisplay.textContent = 'Unknown';
+      bridgeStatusDisplay.classList.add('unset');
+    }
+  }
+
+  function showBridgeActionStatus(msg: string, isError = false): void {
+    bridgeActionStatus.textContent = msg;
+    bridgeActionStatus.style.color = isError ? '#c00' : '#1a7a3a';
+    bridgeActionStatus.hidden = false;
+    setTimeout(() => { bridgeActionStatus.hidden = true; }, 3000);
+  }
+
+  async function checkBridgeStatus(): Promise<void> {
+    bridgeStatusDisplay.textContent = 'Checking…';
+    bridgeStatusDisplay.classList.add('unset');
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: 'GET_BRIDGE_STATUS' }) as BridgeStatusResponse;
+      applyBridgeStatus(resp);
+    } catch {
+      bridgeStatusDisplay.textContent = 'Error';
+    }
+  }
+
+  void checkBridgeStatus();
+
+  btnTestConnection.addEventListener('click', () => {
+    void checkBridgeStatus();
+  });
+
+  btnRebuildIndex.addEventListener('click', async () => {
+    btnRebuildIndex.disabled = true;
+    btnRebuildIndex.textContent = 'Rebuilding…';
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: 'TRIGGER_INGEST', rebuild: true }) as
+        | { ok: true; ingested: number }
+        | { ok: false; error: { message: string } };
+      if (resp.ok) {
+        showBridgeActionStatus(`Rebuilt — ${resp.ingested} records indexed.`);
+      } else {
+        showBridgeActionStatus(resp.error.message, true);
+      }
+    } catch {
+      showBridgeActionStatus('Rebuild failed.', true);
+    } finally {
+      btnRebuildIndex.disabled = false;
+      btnRebuildIndex.textContent = 'Rebuild index';
+    }
   });
 
   // ── Storage stats ─────────────────────────────────────────────────────────

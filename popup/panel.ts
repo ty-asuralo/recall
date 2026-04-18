@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, getSettings, saveSettings, validateSettings } from '../src/shared/settings';
-import type { AppSettings, ConversationMeta, ConversationsIndex, ExportRecord, Meta, Platform, StoredMessage } from '../src/shared/types';
+import type { AppSettings, ConversationMeta, ConversationsIndex, ExportRecord, Meta, Platform, SearchHit, StoredMessage } from '../src/shared/types';
 import { getConversationMetas, getExportDir, getFavoriteMessages, getMessagesByConversation, getMessagesAfterCursor, getStorageStats, saveExportDir, setMessageFavorite } from './idb';
 
 // ── View switching ─────────────────────────────────────────────────────────
@@ -55,6 +55,9 @@ type ConvFilter = Platform | 'all' | 'favorites';
 
 let allConversations: ConversationMeta[] = [];
 let currentFilter: ConvFilter = 'all';
+let searchQuery = '';
+let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+let isSearching = false;
 
 // Favorites state
 let favoriteMessages: StoredMessage[] = [];   // sorted newest-first, for flat list
@@ -244,9 +247,192 @@ async function toggleFavorite(msgId: string, convId: string, btn: HTMLElement): 
   await loadFavorites();
 }
 
+// ── Search ────────────────────────────────────────────────────────────────
+
+function sanitizeSnippet(html: string): string {
+  return html.replace(/<(?!\/?mark\b)[^>]*>/gi, '');
+}
+
+type SearchResponse =
+  | { ok: true; hits: SearchHit[] }
+  | { ok: false; error: { code: string; message: string } };
+
+type GetConvFullResponse =
+  | { ok: true; records: ExportRecord[] }
+  | { ok: false; error: { code: string; message: string } };
+
+type BridgeStatusResp = { ok: boolean; status?: string; capabilities?: { backend: string; backendVersion: string } };
+
+function renderSearchSetupGuide(listEl: HTMLElement, reason: 'not-installed' | 'no-backend' | 'error', detail?: string): void {
+  const steps: Record<string, string> = {
+    'not-installed': `
+      <strong>Recall Bridge is not installed</strong>
+      <p>Search needs a small local helper to index your conversations.</p>
+      <ol>
+        <li>Install <a href="https://github.com/ty-asuralo/recall-bridge/releases" target="_blank">Recall Bridge</a></li>
+        <li>Reload this extension</li>
+        <li>Come back and search</li>
+      </ol>`,
+    'no-backend': `
+      <strong>No search backend configured</strong>
+      <p>A retrieval backend indexes your conversations for search.</p>
+      <ol>
+        <li>Go to <strong>Settings → Search backend</strong></li>
+        <li>Select a backend (e.g. MemPalace)</li>
+        <li>Click <strong>Rebuild index</strong></li>
+        <li>Come back and search</li>
+      </ol>`,
+    'error': `
+      <strong>Search is not available</strong>
+      <p>${detail ? escHtml(detail) : 'Could not connect to the search backend.'}</p>
+      <ol>
+        <li>Go to <strong>Settings → Search backend</strong></li>
+        <li>Click <strong>Test connection</strong> to diagnose</li>
+        <li>Make sure the backend CLI is installed and on PATH</li>
+      </ol>`,
+  };
+  listEl.innerHTML = `<div class="search-setup-guide">${steps[reason]}</div>`;
+}
+
+async function doSearch(query: string, platform: ConvFilter): Promise<void> {
+  const listEl = document.getElementById('conv-list')!;
+  listEl.innerHTML = `<div class="search-state">Searching…</div>`;
+  isSearching = true;
+
+  try {
+    const statusResp = await chrome.runtime.sendMessage({ type: 'GET_BRIDGE_STATUS' }) as BridgeStatusResp;
+    const status = statusResp.ok ? (statusResp.status ?? 'ready') : (statusResp.status ?? 'error');
+
+    if (query !== searchQuery) return;
+
+    if (status === 'not-installed') {
+      renderSearchSetupGuide(listEl, 'not-installed');
+      return;
+    }
+    if (status !== 'ready') {
+      renderSearchSetupGuide(listEl, 'error');
+      return;
+    }
+
+    const opts: Record<string, unknown> = { limit: 20 };
+    if (platform !== 'all' && platform !== 'favorites') {
+      opts.platforms = [platform];
+    }
+    const resp = await chrome.runtime.sendMessage({
+      type: 'SEARCH_QUERY', query, opts,
+    }) as SearchResponse;
+
+    if (query !== searchQuery) return;
+
+    if (!resp.ok) {
+      renderSearchSetupGuide(listEl, 'error', resp.error.message);
+      return;
+    }
+
+    if (resp.hits.length === 0) {
+      listEl.innerHTML = `<div class="search-state">No matches found.</div>`;
+      return;
+    }
+
+    renderSearchHits(listEl, resp.hits);
+  } catch {
+    if (query === searchQuery) {
+      renderSearchSetupGuide(listEl, 'error');
+    }
+  }
+}
+
+function renderSearchHits(listEl: HTMLElement, hits: SearchHit[]): void {
+  listEl.innerHTML = hits.map((h) => {
+    const r = h.record;
+    const roleLabel = r.role === 'user' ? 'You' : 'AI';
+    const time = r.capturedAt ? fmtDate(r.capturedAt) : '';
+    return `
+      <div class="fav-msg-item search-hit" data-conv-id="${escHtml(r.conversationId)}">
+        <div class="fav-msg-item-header">
+          <span class="conv-platform-dot" style="background:${platformColor(r.platform)}"></span>
+          <span class="fav-conv-name">${escHtml(r.title || 'Untitled')}</span>
+          <span class="role-badge ${r.role}">${roleLabel}</span>
+          ${time ? `<span style="font-size:10px;color:#bbb;flex-shrink:0">${escHtml(time)}</span>` : ''}
+        </div>
+        <div class="fav-msg-preview">${sanitizeSnippet(h.snippet)}</div>
+      </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.search-hit').forEach((el) => {
+    el.addEventListener('click', () => {
+      const convId = (el as HTMLElement).dataset.convId!;
+      void showSearchThread(convId);
+    });
+  });
+}
+
+async function showSearchThread(conversationId: string): Promise<void> {
+  // Try local IDB first
+  const localConv = allConversations.find((c) => c.id === conversationId);
+  if (localConv) {
+    void showThread(conversationId);
+    return;
+  }
+
+  // Fall back to bridge
+  document.getElementById('conv-list-panel')!.hidden = true;
+  document.getElementById('thread-panel')!.hidden = false;
+  const threadEl = document.getElementById('thread')!;
+  threadEl.innerHTML = `<div class="thread-empty">Loading…</div>`;
+
+  try {
+    const resp = await chrome.runtime.sendMessage({
+      type: 'GET_CONVERSATION_FULL', conversationId,
+    }) as GetConvFullResponse;
+
+    if (!resp.ok || !resp.records || resp.records.length === 0) {
+      threadEl.innerHTML = `<div class="thread-empty">No messages found for this conversation.</div>`;
+      return;
+    }
+
+    const first = resp.records[0]!;
+    const LABELS: Record<string, string> = { claude: 'Claude', chatgpt: 'ChatGPT', gemini: 'Gemini' };
+    const header = `
+      <div class="thread-header">
+        <span class="thread-platform-dot" style="background:${platformColor(first.platform)}"></span>
+        <div class="thread-header-text">
+          <div class="thread-title">${escHtml(first.title || 'Untitled')}</div>
+          <div class="thread-subtitle">${resp.records.length} message${resp.records.length !== 1 ? 's' : ''} · ${LABELS[first.platform] ?? first.platform}</div>
+        </div>
+      </div>`;
+
+    const bubbles = resp.records.map((r) => `
+      <div class="msg-row ${r.role}">
+        <div>
+          <div class="msg-bubble">${escHtml(r.content)}</div>
+          <div class="msg-footer">
+            <span class="msg-time">${r.capturedAt ? fmtTime(r.capturedAt) : ''}</span>
+          </div>
+        </div>
+      </div>`).join('');
+
+    threadEl.innerHTML = header + bubbles;
+    threadEl.scrollTop = threadEl.scrollHeight;
+  } catch {
+    threadEl.innerHTML = `<div class="thread-empty">Failed to load conversation.</div>`;
+  }
+}
+
+function clearSearch(): void {
+  searchQuery = '';
+  isSearching = false;
+  const input = document.getElementById('panel-search-input') as HTMLInputElement | null;
+  if (input) input.value = '';
+  renderConvList();
+}
+
 // ── Conversations init ─────────────────────────────────────────────────────
 
 function initConversationsView(): void {
+  const searchBar = document.getElementById('search-bar')!;
+  const searchInput = document.getElementById('panel-search-input') as HTMLInputElement;
+
   document.querySelectorAll<HTMLButtonElement>('.filter-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       currentFilter = (tab.dataset.platform ?? 'all') as ConvFilter;
@@ -254,21 +440,54 @@ function initConversationsView(): void {
       tab.classList.add('active');
       document.getElementById('conv-list-panel')!.hidden = false;
       document.getElementById('thread-panel')!.hidden = true;
-      renderConvList();
+
+      if (currentFilter === 'favorites') {
+        searchBar.hidden = true;
+        clearSearch();
+      } else {
+        searchBar.hidden = false;
+        if (searchQuery) {
+          void doSearch(searchQuery, currentFilter);
+        } else {
+          renderConvList();
+        }
+      }
     });
+  });
+
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim();
+    searchQuery = q;
+    if (searchDebounce !== null) clearTimeout(searchDebounce);
+    if (!q) {
+      isSearching = false;
+      renderConvList();
+      return;
+    }
+    searchDebounce = setTimeout(() => {
+      void doSearch(q, currentFilter);
+    }, 200);
   });
 
   document.getElementById('refresh-btn')!.addEventListener('click', async () => {
     try {
       await Promise.all([loadConversations(), loadFavorites()]);
     } catch { /* ignore */ }
-    renderConvList();
+    if (searchQuery) {
+      void doSearch(searchQuery, currentFilter);
+    } else {
+      renderConvList();
+    }
   });
 
   document.getElementById('back-btn')!.addEventListener('click', () => {
     document.getElementById('conv-list-panel')!.hidden = false;
     document.getElementById('thread-panel')!.hidden = true;
-    if (currentFilter === 'favorites') renderConvList();
+    if (searchQuery && currentFilter !== 'favorites') {
+      void doSearch(searchQuery, currentFilter);
+    } else if (currentFilter === 'favorites') {
+      renderConvList();
+    }
   });
 
   // Single delegated star listener — set up once, no duplication across thread loads
@@ -520,6 +739,108 @@ async function initSettingsView(): Promise<void> {
     saveStatus.textContent = 'Saved.';
     saveStatus.className = 'save-status success';
     setTimeout(() => { saveStatus.textContent = ''; saveStatus.className = 'save-status'; }, 2500);
+  });
+
+  // ── Search backend ─────────────────────────────────────────────────────────
+
+  const bridgeStatusDisplay = document.getElementById('bridge-status-display')!;
+  const bridgeBackendRow = document.getElementById('bridge-backend-row')!;
+  const bridgeBackendSelect = document.getElementById('bridge-backend-select') as HTMLSelectElement;
+  const bridgeBackendVersion = document.getElementById('bridge-backend-version')!;
+  const bridgeInstallRow = document.getElementById('bridge-install-row')!;
+  const bridgeActionStatus = document.getElementById('bridge-action-status')!;
+  const btnTestConnection = document.getElementById('btn-test-connection') as HTMLButtonElement;
+  const btnRebuildIndex = document.getElementById('btn-rebuild-index') as HTMLButtonElement;
+
+  function applyBridgeStatus(resp: BridgeStatusResp): void {
+    const status = resp.ok ? (resp.status ?? 'ready') : (resp.status ?? 'error');
+    bridgeStatusDisplay.classList.remove('unset');
+    bridgeInstallRow.hidden = true;
+    bridgeBackendRow.hidden = true;
+
+    if (status === 'ready' && resp.ok && resp.capabilities) {
+      bridgeStatusDisplay.textContent = 'Ready';
+      bridgeBackendRow.hidden = false;
+      bridgeBackendSelect.value = resp.capabilities.backend;
+      bridgeBackendVersion.textContent = resp.capabilities.backendVersion;
+    } else if (status === 'not-installed') {
+      bridgeStatusDisplay.textContent = 'Not installed';
+      bridgeStatusDisplay.classList.add('unset');
+      bridgeInstallRow.hidden = false;
+    } else if (status === 'error') {
+      bridgeStatusDisplay.textContent = 'Error';
+    } else {
+      bridgeStatusDisplay.textContent = 'Unknown';
+      bridgeStatusDisplay.classList.add('unset');
+    }
+  }
+
+  async function checkBridgeStatus(): Promise<void> {
+    bridgeStatusDisplay.textContent = 'Checking…';
+    bridgeStatusDisplay.classList.add('unset');
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: 'GET_BRIDGE_STATUS' }) as BridgeStatusResp;
+      applyBridgeStatus(resp);
+    } catch {
+      bridgeStatusDisplay.textContent = 'Error';
+    }
+  }
+
+  void checkBridgeStatus();
+
+  btnTestConnection.addEventListener('click', () => { void checkBridgeStatus(); });
+
+  bridgeBackendSelect.addEventListener('change', async () => {
+    const backend = bridgeBackendSelect.value as 'mempalace' | 'gbrain' | 'mock';
+    bridgeBackendSelect.disabled = true;
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: 'SET_BACKEND', backend }) as
+        { ok: boolean; data?: { backend: string; backendVersion: string }; error?: { message: string } };
+      if (resp.ok && resp.data) {
+        bridgeBackendVersion.textContent = resp.data.backendVersion;
+        bridgeActionStatus.textContent = `Switched to ${resp.data.backend}. Click Rebuild index to ingest.`;
+        bridgeActionStatus.style.color = '#1a7a3a';
+        bridgeActionStatus.hidden = false;
+        setTimeout(() => { bridgeActionStatus.hidden = true; }, 4000);
+      } else {
+        bridgeActionStatus.textContent = resp.error?.message ?? 'Switch failed.';
+        bridgeActionStatus.style.color = '#c00';
+        bridgeActionStatus.hidden = false;
+        void checkBridgeStatus();
+      }
+    } catch {
+      bridgeActionStatus.textContent = 'Switch failed.';
+      bridgeActionStatus.style.color = '#c00';
+      bridgeActionStatus.hidden = false;
+      void checkBridgeStatus();
+    } finally {
+      bridgeBackendSelect.disabled = false;
+    }
+  });
+
+  btnRebuildIndex.addEventListener('click', async () => {
+    btnRebuildIndex.disabled = true;
+    btnRebuildIndex.textContent = 'Rebuilding…';
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: 'TRIGGER_INGEST', rebuild: true }) as
+        { ok: boolean; data?: { ingested: number }; error?: { message: string } };
+      if (resp.ok && resp.data) {
+        bridgeActionStatus.textContent = `Rebuilt — ${resp.data.ingested} records indexed.`;
+        bridgeActionStatus.style.color = '#1a7a3a';
+      } else {
+        bridgeActionStatus.textContent = resp.error?.message ?? 'Rebuild failed.';
+        bridgeActionStatus.style.color = '#c00';
+      }
+      bridgeActionStatus.hidden = false;
+      setTimeout(() => { bridgeActionStatus.hidden = true; }, 3000);
+    } catch {
+      bridgeActionStatus.textContent = 'Rebuild failed.';
+      bridgeActionStatus.style.color = '#c00';
+      bridgeActionStatus.hidden = false;
+    } finally {
+      btnRebuildIndex.disabled = false;
+      btnRebuildIndex.textContent = 'Rebuild index';
+    }
   });
 
   try {

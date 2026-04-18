@@ -20,7 +20,7 @@ Recall is a Chrome extension that runs quietly in the background and captures yo
 
 Captured messages are exported as JSONL files, organized by platform and role. This gives you a clean, portable dataset of your AI interactions that you own and control.
 
-The exported data is designed to feed into a retrieval layer (coming soon) — so you can carry your context with you when you switch models, or query your own conversation history to surface relevant past exchanges.
+The exported data feeds into a retrieval layer via the [`recall-bridge`](https://github.com/ty-asuralo/recall-bridge) helper — a small Chrome native messaging host that pushes your raw JSONL into a local retrieval tool (MemPalace or GBrain) and routes queries back to the extension. Search happens in-popup: type a query, see results, click to expand the full thread. Install the bridge once and the extension handles the rest.
 
 ```mermaid
 flowchart LR

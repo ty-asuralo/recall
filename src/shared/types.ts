@@ -176,4 +176,52 @@ export interface FavoritesUpdatedPayload {
   type: 'FAVORITES_UPDATED';
 }
 
-export type ExtensionMessage = CaptureMessagePayload | ToggleFavoritePayload | GetFavoritesPayload | FavoritesUpdatedPayload;
+// ── Bridge messages (popup ↔ background SW) ──────────────────────────────────
+// The background SW owns the single native messaging port; popups send these
+// request messages and receive the matching BridgeResponse from the bridge.
+
+import type {
+  BridgeResponse,
+  Capabilities,
+  SearchHit,
+  SearchOpts,
+  BridgeStatus,
+} from '../memory/bridgeProtocol';
+
+export type { BridgeResponse, Capabilities, SearchHit, SearchOpts, BridgeStatus };
+
+export interface SearchQueryPayload {
+  type: 'SEARCH_QUERY';
+  query: string;
+  opts?: SearchOpts;
+}
+
+export interface GetConversationFullPayload {
+  type: 'GET_CONVERSATION_FULL';
+  conversationId: string;
+}
+
+export interface TriggerIngestPayload {
+  type: 'TRIGGER_INGEST';
+  rebuild?: boolean;
+}
+
+export interface GetBridgeStatusPayload {
+  type: 'GET_BRIDGE_STATUS';
+}
+
+export interface SetBackendPayload {
+  type: 'SET_BACKEND';
+  backend: 'mempalace' | 'gbrain' | 'mock';
+}
+
+export type ExtensionMessage =
+  | CaptureMessagePayload
+  | ToggleFavoritePayload
+  | GetFavoritesPayload
+  | FavoritesUpdatedPayload
+  | SearchQueryPayload
+  | GetConversationFullPayload
+  | TriggerIngestPayload
+  | GetBridgeStatusPayload
+  | SetBackendPayload;
